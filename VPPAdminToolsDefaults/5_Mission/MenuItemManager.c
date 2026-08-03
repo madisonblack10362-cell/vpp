@@ -6,35 +6,36 @@
 
 modded class MenuItemManager
 {
-	override void OnCreate(Widget RootW)
-	{
-		super.OnCreate(RootW);
+        override void OnCreate(Widget RootW)
+        {
+                super.OnCreate(RootW);
 
-		Print("[VPPDefaults] OnCreate fired");
+                Print("[VPPDefaults] OnCreate fired");
 
-		if (!M_SUB_WIDGET)
-		{
-			Print("[VPPDefaults] ERROR: M_SUB_WIDGET is null");
-			return;
-		}
+                if (!M_SUB_WIDGET)
+                {
+                        Print("[VPPDefaults] ERROR: M_SUB_WIDGET is null");
+                        return;
+                }
 
-		// === Quantity: 1000 instead of MAX ===
-		EditBoxWidget qty = EditBoxWidget.Cast(M_SUB_WIDGET.FindAnyWidget("InputQuantity"));
-		if (qty)
-		{
-			qty.SetText("1000");
-			Print("[VPPDefaults] Quantity -> 1000");
-		} else {
-			Print("[VPPDefaults] ERROR: InputQuantity not found");
-		}
+                // === Quantity: 1000 instead of MAX ===
+                EditBoxWidget qty = EditBoxWidget.Cast(M_SUB_WIDGET.FindAnyWidget("InputQuantity"));
+                if (qty)
+                {
+                        qty.SetText("1000");
+                        Print("[VPPDefaults] Quantity -> 1000");
+                } else {
+                        Print("[VPPDefaults] ERROR: InputQuantity not found");
+                }
 
-		// === Placement dropdown: On Ground ===
-		if (m_PlacementDropDown)
-		{
-			m_PlacementDropDown.SetIndex(1);
-			Print("[VPPDefaults] Dropdown index -> 1");
-		} else {
-			Print("[VPPDefaults] WARNING: m_PlacementDropDown is null");
-		}
-	}
+                // === Placement dropdown: On Ground ===
+                if (m_PlacementDropDown)
+                {
+                        m_PlacementDropDown.SetText("#VSTR_LBL_ON_GROUND");
+                        m_PlacementDropDown.SetIndex(1);
+                        Print("[VPPDefaults] Dropdown -> On Ground");
+                } else {
+                        Print("[VPPDefaults] WARNING: m_PlacementDropDown is null");
+                }
+        }
 };
