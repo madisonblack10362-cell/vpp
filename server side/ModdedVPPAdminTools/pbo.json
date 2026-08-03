@@ -1,0 +1,22 @@
+{
+    "compress": {
+        "exclude": [
+        ],
+        "include": [
+        ]
+    },
+    "headers": [
+        {
+            "name": "prefix",
+            "value": "ModdedVPPAdminTools"
+        },
+        {
+            "name": "Mikero",
+            "value": "DePbo.dll.9.72"
+        },
+        {
+            "name": "version",
+            "value": "24102300"
+        }
+    ]
+}
