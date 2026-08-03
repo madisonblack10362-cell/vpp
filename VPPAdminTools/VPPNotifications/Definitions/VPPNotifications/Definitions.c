@@ -1,1 +1,0 @@
-#define VPPAT_NOTIFICATIONS
