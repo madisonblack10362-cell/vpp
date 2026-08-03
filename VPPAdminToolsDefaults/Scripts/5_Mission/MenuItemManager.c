@@ -6,9 +6,9 @@
 
 modded class MenuItemManager
 {
-	override void OnMenuShow()
+	override void OnCreate(Widget RootW)
 	{
-		super.OnMenuShow();
+		super.OnCreate(RootW);
 
 		// Quantity: 1000 instead of MAX
 		if (m_InputQuantity)
