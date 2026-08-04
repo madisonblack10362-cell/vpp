@@ -7,24 +7,15 @@ modded class Land_Construction_Flag_Floor
 	protected string m_TerritoryOwnerID;
 	protected string m_TerritoryOwnerName;
 	protected bool   m_TerritoryClaimed = false;
-
-	// m_TerritoryUUID — persistent ID территории, сохраняется в CE storage.
-	// Присваивается при клейме (равен networkID на момент клейма).
-	// Нужен потому что networkID меняется после рестарта сервера.
 	protected string m_TerritoryUUID;
 
-	//------------------------------------------------------------------------------------------------------------------
-	// Получить persistent ID территории (для TerritoryManager)
 	//------------------------------------------------------------------------------------------------------------------
 	string GetFlagTerritoryID()
 	{
 		if (m_TerritoryUUID.Length() > 0) return m_TerritoryUUID;
-		// Для неклейменых флагов — текущий networkID
 		return GetNetworkID().ToString();
 	}
 
-	//------------------------------------------------------------------------------------------------------------------
-	// Получить текущий networkID как строку (для RPC протокола)
 	//------------------------------------------------------------------------------------------------------------------
 	string GetFlagNetID()
 	{
@@ -32,29 +23,30 @@ modded class Land_Construction_Flag_Floor
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Заявить территорию
-	//------------------------------------------------------------------------------------------------------------------
 	bool ClaimTerritory(PlayerBase player)
 	{
+		string steamID;
+		string name;
+		TerritoryManager tm;
+		string blocker;
+
 		if (m_TerritoryClaimed) return false;
 		if (!player || !player.GetIdentity()) return false;
 
-		string steamID = player.GetIdentity().GetPlainId();
-		string name = player.GetIdentity().GetName();
+		steamID = player.GetIdentity().GetPlainId();
+		name = player.GetIdentity().GetName();
 
-		// Проверяем что позиция не внутри чужой территории
-		TerritoryManager tm = TerritoryManager.GetInstance();
+		tm = TerritoryManager.GetInstance();
 		if (!tm.CanBuild(GetPosition(), steamID))
 		{
-			string blocker = tm.GetBlockerOwnerName(GetPosition(), steamID);
+			blocker = tm.GetBlockerOwnerName(GetPosition(), steamID);
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 4.0, "Территория",
-					"Нельзя захватить тут! Территория: " + blocker,
-					"set:dayz_gui icon");
+				player.GetIdentity(), 4.0, "Территория",
+				"Нельзя захватить тут! Территория: " + blocker,
+				"set:dayz_gui icon");
 			return false;
 		}
 
-		// Сохраняем persistent UUID (текущий networkID) для survivals через рестарт
 		m_TerritoryUUID = GetNetworkID().ToString();
 		m_TerritoryOwnerID = steamID;
 		m_TerritoryOwnerName = name;
@@ -63,24 +55,20 @@ modded class Land_Construction_Flag_Floor
 		tm.RegisterTerritory(m_TerritoryUUID, steamID, name, GetPosition(), 100.0);
 
 		NotificationSystem.SendNotificationToPlayerIdentityExtended(
-				player.GetIdentity(), 4.0, "Территория",
-				"Территория захвачена! Радиус: 100м",
-				"" );
+			player.GetIdentity(), 4.0, "Территория",
+			"Территория захвачена! Радиус: 100м",
+			"set:dayz_gui icon");
 
 		Print("[TerritoryFlags] Flag claimed by " + name + " UUID=" + m_TerritoryUUID);
 		return true;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Получить данные территории этого флага
-	//------------------------------------------------------------------------------------------------------------------
 	TerritoryData GetTerritoryData()
 	{
 		return TerritoryManager.GetInstance().GetTerritoryByFlag(GetFlagTerritoryID());
 	}
 
-	//------------------------------------------------------------------------------------------------------------------
-	// CE сохранение — сохраняем UUID чтобы пересоединить после рестарта
 	//------------------------------------------------------------------------------------------------------------------
 	override void OnStoreSave(ParamsWriteContext ctx)
 	{
@@ -93,13 +81,17 @@ modded class Land_Construction_Flag_Floor
 
 	override bool OnStoreLoad(ParamsReadContext ctx, int version)
 	{
+		string savedUUID;
+		TerritoryManager tm;
+		string currentNetID;
+		TerritoryData td;
+
 		if (!super.OnStoreLoad(ctx, version)) return false;
 		if (!ctx.Read(m_TerritoryClaimed)) return false;
 		if (!ctx.Read(m_TerritoryOwnerID)) return false;
 		if (!ctx.Read(m_TerritoryOwnerName)) return false;
 
-		// m_TerritoryUUID может отсутствовать в старых сохранениях
-		string savedUUID = "";
+		savedUUID = "";
 		if (ctx.Read(savedUUID))
 		{
 			m_TerritoryUUID = savedUUID;
@@ -107,13 +99,12 @@ modded class Land_Construction_Flag_Floor
 
 		if (m_TerritoryClaimed && m_TerritoryOwnerID.Length() > 0)
 		{
-			TerritoryManager tm = TerritoryManager.GetInstance();
-			string currentNetID = GetNetworkID().ToString();
+			tm = TerritoryManager.GetInstance();
+			currentNetID = GetNetworkID().ToString();
 
 			if (m_TerritoryUUID.Length() > 0)
 			{
-				// Пересоединяем: ищем территорию по старому UUID, обновляем на новый networkID
-				TerritoryData td = tm.GetTerritoryByFlag(m_TerritoryUUID);
+				td = tm.GetTerritoryByFlag(m_TerritoryUUID);
 				if (td)
 				{
 					tm.UpdateFlagID(m_TerritoryUUID, currentNetID, GetPosition());
@@ -122,15 +113,13 @@ modded class Land_Construction_Flag_Floor
 				}
 				else
 				{
-					// JSON потерян — перерегистрируем с дефолтами
 					tm.RegisterTerritory(currentNetID, m_TerritoryOwnerID, m_TerritoryOwnerName, GetPosition());
 					m_TerritoryUUID = currentNetID;
-					Print("[TerritoryFlags] Save lost, re-registered territory for " + m_TerritoryOwnerName);
+					Print("[TerritoryFlags] Save lost, re-registered for " + m_TerritoryOwnerName);
 				}
 			}
 			else
 			{
-				// Старое сохранение без UUID — перерегистрируем
 				tm.RegisterTerritory(currentNetID, m_TerritoryOwnerID, m_TerritoryOwnerName, GetPosition());
 				m_TerritoryUUID = currentNetID;
 			}
@@ -138,8 +127,6 @@ modded class Land_Construction_Flag_Floor
 		return true;
 	}
 
-	//------------------------------------------------------------------------------------------------------------------
-	// При удалении флага — снять территорию
 	//------------------------------------------------------------------------------------------------------------------
 	void EEKilled(Object killer)
 	{
@@ -155,9 +142,10 @@ modded class Land_Construction_Flag_Floor
 
 	protected void CleanupTerritory()
 	{
+		string fid;
 		if (m_TerritoryClaimed)
 		{
-			string fid = GetFlagTerritoryID();
+			fid = GetFlagTerritoryID();
 			if (fid.Length() > 0)
 			{
 				TerritoryManager.GetInstance().UnregisterTerritory(fid);
@@ -167,11 +155,10 @@ modded class Land_Construction_Flag_Floor
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Добавляем действие «Меню территории»
-	//------------------------------------------------------------------------------------------------------------------
 	override array<string> GetActions()
 	{
-		array<string> actions = super.GetActions();
+		array<string> actions;
+		actions = super.GetActions();
 		actions.Insert("ActionTerritoryMenu");
 		return actions;
 	}

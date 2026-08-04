@@ -4,190 +4,203 @@
 
 class TerritoryRPC
 {
-        // Открыть меню флага (сервер отправляет данные клиенту)
-        //------------------------------------------------------------------------------------------------------------------
-        static void OpenMenu(PlayerBase player, Land_Construction_Flag_Floor flag)
-        {
-                if (!player || !player.GetIdentity() || !flag) return;
+	//------------------------------------------------------------------------------------------------------------------
+	static void OpenMenu(PlayerBase player, Land_Construction_Flag_Floor flag)
+	{
+		string steamID;
+		string netID;
+		string data;
+		TerritoryData td;
+		string ownerFlag;
+		int i;
 
-                string steamID = player.GetIdentity().GetPlainId();
-                // Для RPC протокола ВСЕГДА отправляем текущий networkID (клиент использует его для обратных RPC)
-                string netID = flag.GetFlagNetID();
-                TerritoryData td = flag.GetTerritoryData();
+		if (!player || !player.GetIdentity() || !flag) return;
 
-                // Формат: netID|ownerID|ownerName|territoryName|radius|claimed|isOwner|invitedCount|id1:name1;id2:name2
-                string data = netID + "|";
+		steamID = player.GetIdentity().GetPlainId();
+		netID = flag.GetFlagNetID();
+		td = flag.GetTerritoryData();
 
-                if (td)
-                {
-                        data += td.OwnerID + "|";
-                        data += td.OwnerName + "|";
-                        data += td.TerritoryName + "|";
-                        data += td.Radius.ToString() + "|";
-                        data += "1|";
-                        string ownerFlag;
-                        if (td.IsOwner(steamID))
-                                ownerFlag = "1";
-                        else
-                                ownerFlag = "0";
-                        data += ownerFlag + "|";
-                        data += td.InvitedIDs.Count().ToString() + "|";
-                        for (int i = 0; i < td.InvitedIDs.Count(); i++)
-                        {
-                                if (i > 0) data += ";";
-                                data += td.InvitedIDs[i] + ":" + td.InvitedNames[i];
-                        }
-                }
-                else
-                {
-                        data += "|||0|0|0|";
-                }
+		data = netID + "|";
 
-                GetRPCManager().SendRPC("RPC_TerritoryFlags", "OpenMenu", new Param1<string>(data), true, player.GetIdentity());
-        }
+		if (td)
+		{
+			data += td.OwnerID + "|";
+			data += td.OwnerName + "|";
+			data += td.TerritoryName + "|";
+			data += td.Radius.ToString() + "|";
+			data += "1|";
+			if (td.IsOwner(steamID))
+				ownerFlag = "1";
+			else
+				ownerFlag = "0";
+			data += ownerFlag + "|";
+			data += td.InvitedIDs.Count().ToString() + "|";
+			for (i = 0; i < td.InvitedIDs.Count(); i++)
+			{
+				if (i > 0) data += ";";
+				data += td.InvitedIDs[i] + ":" + td.InvitedNames[i];
+			}
+		}
+		else
+		{
+			data += "|||0|0|0|";
+		}
 
-        //------------------------------------------------------------------------------------------------------------------
-        // Заявить территорию
-        //------------------------------------------------------------------------------------------------------------------
-        static void ClaimFlag(PlayerBase player, Land_Construction_Flag_Floor flag)
-        {
-                if (!flag) return;
-                flag.ClaimTerritory(player);
-                // Отправляем обновлённые данные
-                OpenMenu(player, flag);
-        }
+		GetRPCManager().SendRPC("RPC_TerritoryFlags", "OpenMenu", new Param1<string>(data), true, player.GetIdentity());
+	}
 
-        //------------------------------------------------------------------------------------------------------------------
-        // Инвайт игрока
-        //------------------------------------------------------------------------------------------------------------------
-        static void InvitePlayer(PlayerBase player, Land_Construction_Flag_Floor flag, string targetName)
-        {
-                if (!player || !player.GetIdentity() || !flag) return;
-                string steamID = player.GetIdentity().GetPlainId();
-                string flagUUID = flag.GetFlagTerritoryID();
+	//------------------------------------------------------------------------------------------------------------------
+	static void ClaimFlag(PlayerBase player, Land_Construction_Flag_Floor flag)
+	{
+		if (!flag) return;
+		flag.ClaimTerritory(player);
+		OpenMenu(player, flag);
+	}
 
-                PlayerBase target = FindPlayerByName(targetName);
-                if (!target)
-                {
-                        NotificationSystem.SendNotificationToPlayerIdentityExtended(
-                                        player.GetIdentity(), 3.0, "Территория",
-                                        "Игрок не найден: " + targetName,
-                                        "set:dayz_gui icon");
-                        return;
-                }
+	//------------------------------------------------------------------------------------------------------------------
+	static void InvitePlayer(PlayerBase player, Land_Construction_Flag_Floor flag, string targetName)
+	{
+		string steamID;
+		string flagUUID;
+		PlayerBase target;
+		string targetID;
+		bool ok;
 
-                string targetID = target.GetIdentity().GetPlainId();
-                bool ok = TerritoryManager.GetInstance().InvitePlayer(flagUUID, steamID, targetID, targetName);
+		if (!player || !player.GetIdentity() || !flag) return;
 
-                if (ok)
-                {
-                        NotificationSystem.SendNotificationToPlayerIdentityExtended(
-                                        player.GetIdentity(), 3.0, "Территория",
-                                        "Приглашён: " + targetName,
-                                        "set:dayz_gui icon");
+		steamID = player.GetIdentity().GetPlainId();
+		flagUUID = flag.GetFlagTerritoryID();
 
-                        NotificationSystem.SendNotificationToPlayerIdentityExtended(
-                                        target.GetIdentity(), 4.0, "Территория",
-                                        "Вас пригласили на территорию!",
-                                        "set:dayz_gui icon");
+		target = FindPlayerByName(targetName);
+		if (!target)
+		{
+			NotificationSystem.SendNotificationToPlayerIdentityExtended(
+				player.GetIdentity(), 3.0, "Территория",
+				"Игрок не найден: " + targetName,
+				"set:dayz_gui icon");
+			return;
+		}
 
-                        TerritoryManager.GetInstance().Save();
-                }
-                else
-                {
-                        NotificationSystem.SendNotificationToPlayerIdentityExtended(
-                                        player.GetIdentity(), 3.0, "Территория",
-                                        "Уже приглашён или ошибка",
-                                        "set:dayz_gui icon");
-                }
+		targetID = target.GetIdentity().GetPlainId();
+		ok = TerritoryManager.GetInstance().InvitePlayer(flagUUID, steamID, targetID, targetName);
 
-                OpenMenu(player, flag);
-        }
+		if (ok)
+		{
+			NotificationSystem.SendNotificationToPlayerIdentityExtended(
+				player.GetIdentity(), 3.0, "Территория",
+				"Приглашён: " + targetName,
+				"set:dayz_gui icon");
 
-        //------------------------------------------------------------------------------------------------------------------
-        // Удалить инвайт
-        //------------------------------------------------------------------------------------------------------------------
-        static void RemoveInvite(PlayerBase player, Land_Construction_Flag_Floor flag, string targetSteamID)
-        {
-                if (!player || !player.GetIdentity() || !flag) return;
-                string steamID = player.GetIdentity().GetPlainId();
-                string flagUUID = flag.GetFlagTerritoryID();
+			NotificationSystem.SendNotificationToPlayerIdentityExtended(
+				target.GetIdentity(), 4.0, "Территория",
+				"Вас пригласили на территорию!",
+				"set:dayz_gui icon");
 
-                bool ok = TerritoryManager.GetInstance().RemoveInvite(flagUUID, steamID, targetSteamID);
-                if (ok)
-                {
-                        NotificationSystem.SendNotificationToPlayerIdentityExtended(
-                                        player.GetIdentity(), 3.0, "Территория",
-                                        "Приглашение удалено",
-                                        "set:dayz_gui icon");
-                        TerritoryManager.GetInstance().Save();
-                }
-                OpenMenu(player, flag);
-        }
+			TerritoryManager.GetInstance().Save();
+		}
+		else
+		{
+			NotificationSystem.SendNotificationToPlayerIdentityExtended(
+				player.GetIdentity(), 3.0, "Территория",
+				"Уже приглашён или ошибка",
+				"set:dayz_gui icon");
+		}
 
-        //------------------------------------------------------------------------------------------------------------------
-        // Сменить название
-        //------------------------------------------------------------------------------------------------------------------
-        static void SetName(PlayerBase player, Land_Construction_Flag_Floor flag, string name)
-        {
-                if (!player || !player.GetIdentity() || !flag) return;
-                string flagUUID = flag.GetFlagTerritoryID();
-                TerritoryManager.GetInstance().SetTerritoryName(flagUUID, player.GetIdentity().GetPlainId(), name);
-                NotificationSystem.SendNotificationToPlayerIdentityExtended(
-                                player.GetIdentity(), 3.0, "Территория",
-                                "Название: " + name,
-                                "set:dayz_gui icon");
-                OpenMenu(player, flag);
-        }
+		OpenMenu(player, flag);
+	}
 
-        //------------------------------------------------------------------------------------------------------------------
-        // Сменить радиус
-        //------------------------------------------------------------------------------------------------------------------
-        static void SetRadius(PlayerBase player, Land_Construction_Flag_Floor flag, float radius)
-        {
-                if (!player || !player.GetIdentity() || !flag) return;
-                string flagUUID = flag.GetFlagTerritoryID();
-                TerritoryManager.GetInstance().SetRadius(flagUUID, player.GetIdentity().GetPlainId(), radius);
-                NotificationSystem.SendNotificationToPlayerIdentityExtended(
-                                player.GetIdentity(), 3.0, "Территория",
-                                "Радиус: " + radius.ToString() + "м",
-                                "set:dayz_gui icon");
-                OpenMenu(player, flag);
-        }
+	//------------------------------------------------------------------------------------------------------------------
+	static void RemoveInvite(PlayerBase player, Land_Construction_Flag_Floor flag, string targetSteamID)
+	{
+		string steamID;
+		string flagUUID;
+		bool ok;
 
-        //------------------------------------------------------------------------------------------------------------------
-        // Поиск игрока по имени (точное, потом частичное)
-        //------------------------------------------------------------------------------------------------------------------
-        static PlayerBase FindPlayerByName(string name)
-        {
-                if (name.Length() == 0) return null;
+		if (!player || !player.GetIdentity() || !flag) return;
 
-                array<Man> players = new array<Man>;
-                GetGame().GetPlayers(players);
-                string search = name;
-                search.ToLower();
+		steamID = player.GetIdentity().GetPlainId();
+		flagUUID = flag.GetFlagTerritoryID();
 
-                // Сначала точное совпадение
-                foreach (Man m : players)
-                {
-                        PlayerBase p = PlayerBase.Cast(m);
-                        if (p && p.GetIdentity())
-                        {
-                                if (p.GetIdentity().GetName().ToLower() == search)
-                                        return p;
-                        }
-                }
+		ok = TerritoryManager.GetInstance().RemoveInvite(flagUUID, steamID, targetSteamID);
+		if (ok)
+		{
+			NotificationSystem.SendNotificationToPlayerIdentityExtended(
+				player.GetIdentity(), 3.0, "Территория",
+				"Приглашение удалено",
+				"set:dayz_gui icon");
+			TerritoryManager.GetInstance().Save();
+		}
+		OpenMenu(player, flag);
+	}
 
-                // Потом частичное
-                foreach (Man m : players)
-                {
-                        PlayerBase p = PlayerBase.Cast(m);
-                        if (p && p.GetIdentity())
-                        {
-                                if (p.GetIdentity().GetName().ToLower().Contains(search))
-                                        return p;
-                        }
-                }
-                return null;
-        }
+	//------------------------------------------------------------------------------------------------------------------
+	static void SetName(PlayerBase player, Land_Construction_Flag_Floor flag, string name)
+	{
+		string flagUUID;
+
+		if (!player || !player.GetIdentity() || !flag) return;
+
+		flagUUID = flag.GetFlagTerritoryID();
+		TerritoryManager.GetInstance().SetTerritoryName(flagUUID, player.GetIdentity().GetPlainId(), name);
+		NotificationSystem.SendNotificationToPlayerIdentityExtended(
+			player.GetIdentity(), 3.0, "Территория",
+			"Название: " + name,
+			"set:dayz_gui icon");
+		OpenMenu(player, flag);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	static void SetRadius(PlayerBase player, Land_Construction_Flag_Floor flag, float radius)
+	{
+		string flagUUID;
+
+		if (!player || !player.GetIdentity() || !flag) return;
+
+		flagUUID = flag.GetFlagTerritoryID();
+		TerritoryManager.GetInstance().SetRadius(flagUUID, player.GetIdentity().GetPlainId(), radius);
+		NotificationSystem.SendNotificationToPlayerIdentityExtended(
+			player.GetIdentity(), 3.0, "Территория",
+			"Радиус: " + radius.ToString() + "м",
+			"set:dayz_gui icon");
+		OpenMenu(player, flag);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	static PlayerBase FindPlayerByName(string name)
+	{
+		array<Man> players;
+		string search;
+		Man m;
+		PlayerBase p;
+
+		if (name.Length() == 0) return null;
+
+		players = new array<Man>;
+		GetGame().GetPlayers(players);
+		search = name;
+		search.ToLower();
+
+		for (int i = 0; i < players.Count(); i++)
+		{
+			m = players[i];
+			p = PlayerBase.Cast(m);
+			if (p && p.GetIdentity())
+			{
+				if (p.GetIdentity().GetName().ToLower() == search)
+					return p;
+			}
+		}
+
+		for (int i = 0; i < players.Count(); i++)
+		{
+			m = players[i];
+			p = PlayerBase.Cast(m);
+			if (p && p.GetIdentity())
+			{
+				if (p.GetIdentity().GetName().ToLower().Contains(search))
+					return p;
+			}
+		}
+		return null;
+	}
 }

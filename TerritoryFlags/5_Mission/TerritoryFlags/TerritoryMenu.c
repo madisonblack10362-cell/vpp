@@ -1,6 +1,6 @@
-//----------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 // TerritoryMenu — клиентское меню управления территорией флага
-//----------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 
 class TerritoryMenu extends ScriptedWidgetEventHandler
 {
@@ -8,12 +8,8 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	protected Widget      m_HeaderPanel;
 	protected TextWidget   m_TitleText;
 	protected ButtonWidget m_BtnClose;
-
-	// Claim
 	protected Widget      m_ClaimPanel;
 	protected ButtonWidget m_BtnClaim;
-
-	// Main panel
 	protected Widget      m_MainPanel;
 	protected EditBoxWidget m_NameInput;
 	protected EditBoxWidget m_RadiusInput;
@@ -23,13 +19,9 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	protected ButtonWidget m_BtnInvite;
 	protected TextListboxWidget m_PlayerList;
 	protected ButtonWidget m_BtnRemoveInvite;
-
-	// State
-	protected string  m_FlagNetID;  // текущий networkID флага (для RPC)
+	protected string  m_FlagNetID;
 	protected bool    m_IsOwner;
 	protected bool    m_IsClaimed;
-
-	// Отдельный массив steamID для списка игроков (т.к. TextListboxWidget.AddItem не принимает string data)
 	protected ref array<string> m_InvitedSteamIDs = new array<string>;
 
 	void TerritoryMenu()
@@ -42,7 +34,6 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	{
 		if (m_Root) { Hide(); }
 
-		// Путь ОТНОСИТЕЛЬНО КОРНЯ PBO (не включая имя мода!)
 		m_Root = GetGame().GetWorkspace().CreateWidgets("GUI/Layouts/TerritoryMenu/TerritoryMenu.layout");
 		if (!m_Root) { Print("[TerritoryMenu] ERROR: Failed to create layout"); return; }
 
@@ -93,24 +84,43 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	//------------------------------------------------------------------------------------------------------------------
 	void ParseAndUpdate(string data)
 	{
+		array<string> parts;
+		string ownerID;
+		string ownerName;
+		string terrName;
+		float radius;
+		int claimed;
+		int isOwner;
+		int invCount;
+		string invitedStr;
+		array<string> pairs;
+		string pair;
+		array<string> kv;
+
 		if (!m_Root) Show(null);
 
-		// Формат: netID|ownerID|ownerName|territoryName|radius|claimed|isOwner|invitedCount|id1:name1;id2:name2
-		array<string> parts = new array<string>;
+		parts = new array<string>;
 		data.Split("|", parts);
 
 		if (parts.Count() < 7) return;
 
-		m_FlagNetID = parts[0];  // ТЕКУЩИЙ networkID для обратных RPC
-		string ownerID = parts[1];
-		string ownerName = parts[2];
-		string terrName = parts[3];
-		float radius = parts[4].ToFloat();
-		int claimed  = parts[5].ToInt();
-		int isOwner  = parts[6].ToInt();
+		m_FlagNetID = parts[0];
+		ownerID = parts[1];
+		ownerName = parts[2];
+		terrName = parts[3];
+		radius = parts[4].ToFloat();
+		claimed  = parts[5].ToInt();
+		isOwner  = parts[6].ToInt();
 
-		m_IsClaimed = (claimed == 1);
-		m_IsOwner = (isOwner == 1);
+		if (claimed == 1)
+			m_IsClaimed = true;
+		else
+			m_IsClaimed = false;
+
+		if (isOwner == 1)
+			m_IsOwner = true;
+		else
+			m_IsOwner = false;
 
 		if (!m_IsClaimed)
 		{
@@ -127,20 +137,20 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		if (m_NameInput) m_NameInput.SetText(terrName);
 		if (m_RadiusInput) m_RadiusInput.SetText(radius.ToString());
 
-		// Парсим список приглашённых
 		m_PlayerList.ClearItems();
 		m_InvitedSteamIDs.Clear();
 		if (parts.Count() >= 9)
 		{
-			int invCount = parts[7].ToInt();
+			invCount = parts[7].ToInt();
 			if (invCount > 0)
 			{
-				string invitedStr = parts[8];
-				array<string> pairs = new array<string>;
+				invitedStr = parts[8];
+				pairs = new array<string>;
 				invitedStr.Split(";", pairs);
-				foreach (string pair : pairs)
+				for (int i = 0; i < pairs.Count(); i++)
 				{
-					array<string> kv = new array<string>;
+					pair = pairs[i];
+					kv = new array<string>;
 					pair.Split(":", kv);
 					if (kv.Count() >= 2)
 					{
@@ -151,18 +161,22 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 			}
 		}
 
-		bool ownerControls = m_IsOwner;
-		if (m_NameInput) m_NameInput.Enable(ownerControls);
-		if (m_RadiusInput) m_RadiusInput.Enable(ownerControls);
-		if (m_BtnSetName) m_BtnSetName.Show(ownerControls);
-		if (m_BtnSetRadius) m_BtnSetRadius.Show(ownerControls);
-		if (m_BtnInvite) m_BtnInvite.Show(ownerControls);
-		if (m_BtnRemoveInvite) m_BtnRemoveInvite.Show(ownerControls);
+		if (m_NameInput) m_NameInput.Enable(m_IsOwner);
+		if (m_RadiusInput) m_RadiusInput.Enable(m_IsOwner);
+		if (m_BtnSetName) m_BtnSetName.Show(m_IsOwner);
+		if (m_BtnSetRadius) m_BtnSetRadius.Show(m_IsOwner);
+		if (m_BtnInvite) m_BtnInvite.Show(m_IsOwner);
+		if (m_BtnRemoveInvite) m_BtnRemoveInvite.Show(m_IsOwner);
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
 	override bool OnClick(Widget w, int x, int y, int button)
 	{
+		string name;
+		float r;
+		int row;
+		string targetID;
+
 		if (w == m_BtnClose)
 		{
 			Hide();
@@ -170,7 +184,6 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		}
 		if (w == m_BtnClaim)
 		{
-			// Отправляем ТЕКУЩИЙ networkID чтобы сервер нашёл флаг
 			GetRPCManager().SendRPC("RPC_TerritoryFlags", "ClaimFlag", new Param1<string>(m_FlagNetID), true);
 			return true;
 		}
@@ -181,13 +194,13 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		}
 		if (w == m_BtnSetRadius && m_RadiusInput)
 		{
-			float r = m_RadiusInput.GetText().ToFloat();
+			r = m_RadiusInput.GetText().ToFloat();
 			GetRPCManager().SendRPC("RPC_TerritoryFlags", "SetRadius", new Param2<string, float>(m_FlagNetID, r), true);
 			return true;
 		}
 		if (w == m_BtnInvite && m_InviteInput)
 		{
-			string name = m_InviteInput.GetText();
+			name = m_InviteInput.GetText();
 			if (name.Length() > 0)
 			{
 				GetRPCManager().SendRPC("RPC_TerritoryFlags", "InvitePlayer", new Param2<string, string>(m_FlagNetID, name), true);
@@ -197,10 +210,10 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		}
 		if (w == m_BtnRemoveInvite)
 		{
-			int row = m_PlayerList.GetSelectedRow();
+			row = m_PlayerList.GetSelectedRow();
 			if (row >= 0 && row < m_InvitedSteamIDs.Count())
 			{
-				string targetID = m_InvitedSteamIDs[row];
+				targetID = m_InvitedSteamIDs[row];
 				GetRPCManager().SendRPC("RPC_TerritoryFlags", "RemoveInvite", new Param2<string, string>(m_FlagNetID, targetID), true);
 			}
 			return true;
@@ -211,6 +224,8 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	//------------------------------------------------------------------------------------------------------------------
 	void ApplyStyles()
 	{
+		float rowY;
+
 		if (!m_Root) return;
 
 		m_Root.SetPos(0.5, 0.3);
@@ -244,7 +259,7 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 
 		StyleButton(m_BtnClaim, 0.1, 0.15, 0.8, 0.15, "ЗАХВАТИТЬ ТЕРРИТОРИЮ", ARGB(255, 40, 120, 40));
 
-		float rowY = 0.03;
+		rowY = 0.03;
 		StyleRow(m_NameInput, m_BtnSetName, rowY, "Название:", "Применить");
 		StyleRow(m_RadiusInput, m_BtnSetRadius, rowY + 0.12, "Радиус (20-300м):", "Применить");
 		StyleRow(m_InviteInput, m_BtnInvite, rowY + 0.24, "Пригласить игрока:", "Пригласить", ARGB(255, 40, 100, 160));
@@ -271,8 +286,10 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		btn.SetPos(0.78, y);
 		btn.SetSize(0.15, 0.08);
 		btn.SetText(btnText);
-		if (btnColor != 0) btn.SetColor(btnColor);
-		else btn.SetColor(ARGB(255, 60, 60, 80));
+		if (btnColor != 0)
+			btn.SetColor(btnColor);
+		else
+			btn.SetColor(ARGB(255, 60, 60, 80));
 		btn.SetTextColor(ARGB(255, 255, 255, 255));
 	}
 
