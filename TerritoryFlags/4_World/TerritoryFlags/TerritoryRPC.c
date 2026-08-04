@@ -25,7 +25,12 @@ class TerritoryRPC
                         data += td.TerritoryName + "|";
                         data += td.Radius.ToString() + "|";
                         data += "1|";
-                        string ownerFlag; if (td.IsOwner(steamID)) ownerFlag = "1"; else ownerFlag = "0"; data += ownerFlag + "|";
+                        string ownerFlag;
+                        if (td.IsOwner(steamID))
+                                ownerFlag = "1";
+                        else
+                                ownerFlag = "0";
+                        data += ownerFlag + "|";
                         data += td.InvitedIDs.Count().ToString() + "|";
                         for (int i = 0; i < td.InvitedIDs.Count(); i++)
                         {
