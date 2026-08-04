@@ -8,12 +8,6 @@ class ActionDZM_OpenMenu extends ActionInteractBase
                 m_CommandUID = DayZPlayerConstants.CMD_ACTIONMOD_ATTACHITEM;
         }
 
-        override void CreateConditionComponents()
-        {
-                m_ConditionItem = new CCNonExistent;
-                m_ConditionTarget = new CCTCursor(UAMaxDistances.DEFAULT);
-        }
-
         override string GetText()
         {
                 return "Меню территории";
