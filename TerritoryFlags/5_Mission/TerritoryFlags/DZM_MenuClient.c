@@ -147,7 +147,7 @@ class DZM_TerritoryMenu extends ScriptedWidgetEventHandler
                         friendsStr.Split(";", friendArr);
                         for (i = 0; i < friendArr.Count(); i++)
                         {
-                                m_PlayerList.AddItem(friendArr[i], 0.0);
+                                m_PlayerList.AddItem(friendArr[i], "");
                                 m_FriendIDs.Insert(friendArr[i]);
                         }
                 }
