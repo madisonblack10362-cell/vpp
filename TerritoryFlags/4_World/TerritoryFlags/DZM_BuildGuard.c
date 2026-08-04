@@ -32,7 +32,7 @@ modded class ActionDeployObject
                 {
                         if (!DZM_TerritoryManager.Get().CheckFlagPlacementAllowed(projPos))
                         {
-                                pb.Zen_DisplayClientMessage("Слишком близко к чужой территории!");
+                                pb.DZM_ShowLocalMessage("Слишком близко к чужой территории!");
                                 m_DZM_LastResult = false;
                                 return false;
                         }
@@ -44,7 +44,7 @@ modded class ActionDeployObject
                 {
                         string blocker;
                         blocker = DZM_TerritoryManager.Get().FindBlockerName(projPos, steamID);
-                        pb.Zen_DisplayClientMessage("Нельзя строить здесь! Территория: " + blocker);
+                        pb.DZM_ShowLocalMessage("Нельзя строить здесь! Территория: " + blocker);
                         m_DZM_LastResult = false;
                         return false;
                 }
@@ -52,7 +52,7 @@ modded class ActionDeployObject
                 m_DZM_LastResult = true;
                 return true;
         }
-}
+};
 
 modded class ActionBuildPart
 {
@@ -65,7 +65,7 @@ modded class ActionBuildPart
                 PlayerBase pb;
 
                 if (!super.ActionCondition(player, target, item)) return false;
-                if (GetGame().IsServer()) return true;
+                if (GetGame().IsDedicatedServer()) return true;
 
                 targetObj = target.GetObject();
                 if (!targetObj) return true;
@@ -79,12 +79,12 @@ modded class ActionBuildPart
                 if (!DZM_TerritoryManager.Get().CheckBuildAllowed(buildPos, steamID))
                 {
                         blocker = DZM_TerritoryManager.Get().FindBlockerName(buildPos, steamID);
-                        pb.Zen_DisplayClientMessage("Нельзя строить! Территория: " + blocker);
+                        pb.DZM_ShowLocalMessage("Нельзя строить! Территория: " + blocker);
                         return false;
                 }
                 return true;
         }
-}
+};
 
 modded class ActionDismantlePart
 {
@@ -97,7 +97,7 @@ modded class ActionDismantlePart
                 PlayerBase pb;
 
                 if (!super.ActionCondition(player, target, item)) return false;
-                if (GetGame().IsServer()) return true;
+                if (GetGame().IsDedicatedServer()) return true;
 
                 targetObj = target.GetObject();
                 if (!targetObj) return true;
@@ -111,9 +111,9 @@ modded class ActionDismantlePart
                 if (!DZM_TerritoryManager.Get().CheckBuildAllowed(buildPos, steamID))
                 {
                         blocker = DZM_TerritoryManager.Get().FindBlockerName(buildPos, steamID);
-                        pb.Zen_DisplayClientMessage("Нельзя разбирать! Территория: " + blocker);
+                        pb.DZM_ShowLocalMessage("Нельзя разбирать! Территория: " + blocker);
                         return false;
                 }
                 return true;
         }
-}
+};
