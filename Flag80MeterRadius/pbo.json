@@ -1,0 +1,22 @@
+{
+    "compress": {
+        "exclude": [
+        ],
+        "include": [
+        ]
+    },
+    "headers": [
+        {
+            "name": "product",
+            "value": "dayz ugc"
+        },
+        {
+            "name": "version",
+            "value": "1"
+        },
+        {
+            "name": "prefix",
+            "value": "Flag80MeterRadius"
+        }
+    ]
+}
