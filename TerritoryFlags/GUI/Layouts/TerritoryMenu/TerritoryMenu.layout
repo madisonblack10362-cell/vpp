@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget name="DZM_MenuRoot" type="Widget">
+        <children>
+                <!-- Заголовок -->
+                <widget name="HeaderPanel" type="Widget">
+                        <children>
+                                <widget name="TitleText" type="TextWidget"/>
+                                <widget name="BtnClose" type="ButtonWidget"/>
+                        </children>
+                </widget>
+
+                <!-- Кнопка захвата -->
+                <widget name="ClaimPanel" type="Widget">
+                        <children>
+                                <widget name="BtnClaim" type="ButtonWidget"/>
+                        </children>
+                </widget>
+
+                <!-- Основная панель -->
+                <widget name="MainPanel" type="Widget">
+                        <children>
+                                <widget name="NameInput" type="EditBoxWidget"/>
+                                <widget name="BtnSetName" type="ButtonWidget"/>
+                                <widget name="RadiusInput" type="EditBoxWidget"/>
+                                <widget name="BtnSetRadius" type="ButtonWidget"/>
+                                <widget name="InviteInput" type="EditBoxWidget"/>
+                                <widget name="BtnInvite" type="ButtonWidget"/>
+                                <widget name="PlayerList" type="TextListboxWidget"/>
+                                <widget name="BtnKick" type="ButtonWidget"/>
+                        </children>
+                </widget>
+        </children>
+</widget>

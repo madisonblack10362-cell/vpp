@@ -54,6 +54,14 @@ class CfgMods
 					"TerritoryFlags/4_World"
 				};
 			};
+			class missionScriptModule
+			{
+				value="";
+				files[]=
+			{
+					"TerritoryFlags/5_Mission"
+				};
+			};
 		};
 	};
 };

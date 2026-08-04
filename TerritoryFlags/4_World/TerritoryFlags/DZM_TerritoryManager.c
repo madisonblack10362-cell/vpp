@@ -1,0 +1,466 @@
+//------------------------------------------------------------------------------------------------------------------
+// DZM_TerritoryManager — серверный синглтон, управляет всеми территориями
+// Данные хранятся в файле $profile:DZM_TerritoryFlags.sav
+// При перезапуске флаги получают новые NetworkID — привязка через UUID в CE storage
+//------------------------------------------------------------------------------------------------------------------
+
+class DZM_TerritoryManager
+{
+	private static ref DZM_TerritoryManager s_Instance;
+	private ref map<string, ref DZM_TerritoryData> m_Data;
+	private string m_SavePath;
+
+	//------------------------------------------------------------------------------------------------------------------
+	static DZM_TerritoryManager Get()
+	{
+		if (!s_Instance)
+		{
+			s_Instance = new DZM_TerritoryManager();
+			s_Instance.Init();
+		}
+		return s_Instance;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	void Init()
+	{
+		m_Data = new map<string, ref DZM_TerritoryData>;
+		m_SavePath = "$profile:DZM_TerritoryFlags.sav";
+		LoadFromFile();
+		Print("[DZM_TerritoryFlags] Manager initialized, territories: " + m_Data.Count().ToString());
+	}
+
+	//==================================================================================================================
+	// РАБОТА С ТЕРРИТОРИЯМИ
+	//==================================================================================================================
+
+	//------------------------------------------------------------------------------------------------------------------
+	DZM_TerritoryData GetByNetID(string netID)
+	{
+		if (m_Data.Contains(netID))
+		{
+			return m_Data.Get(netID);
+		}
+		return null;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	void RegisterFlag(string netID, string uuid)
+	{
+		DZM_TerritoryData existing;
+		if (uuid.Length() > 0)
+		{
+			// Флаг с UUID уже был сохранён ранее — переносим на новый netID
+			int i;
+			array<string> keys;
+			keys = m_Data.GetKeyArray();
+			for (i = 0; i < keys.Count(); i++)
+			{
+				if (keys[i] == uuid)
+				{
+					existing = m_Data.Get(keys[i]);
+					m_Data.Remove(keys[i]);
+					m_Data.Set(netID, existing);
+					existing.FlagNetID = netID;
+					Print("[DZM_TerritoryFlags] Reconnected flag UUID=" + uuid + " -> netID=" + netID);
+					SaveToFile();
+					return;
+				}
+			}
+		}
+
+		// Новый флаг
+		DZM_TerritoryData td;
+		td = new DZM_TerritoryData();
+		td.FlagNetID = netID;
+		m_Data.Set(netID, td);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	void UnregisterFlag(string netID)
+	{
+		if (m_Data.Contains(netID))
+		{
+			m_Data.Remove(netID);
+			SaveToFile();
+			Print("[DZM_TerritoryFlags] Unregistered flag: " + netID);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	bool ClaimFlag(string netID, string steamID, string playerName, vector flagPos)
+	{
+		DZM_TerritoryData td;
+		td = GetByNetID(netID);
+		if (!td) return false;
+		if (td.Claimed) return false;
+
+		td.OwnerSteamID = steamID;
+		td.OwnerName = playerName;
+		td.DisplayName = playerName + " - База";
+		td.Claimed = true;
+		td.Radius = DZM_Settings.CLAIM_RADIUS;
+		SaveToFile();
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	bool CheckBuildAllowed(vector pos, string steamID)
+	{
+		int i;
+		array<string> keys;
+		DZM_TerritoryData td;
+		vector flagPos;
+		float dist;
+		Object flagObj;
+
+		keys = m_Data.GetKeyArray();
+		for (i = 0; i < keys.Count(); i++)
+		{
+			td = m_Data.Get(keys[i]);
+			if (!td || !td.Claimed) continue;
+
+			flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+			if (!flagObj) continue;
+
+			flagPos = flagObj.GetPosition();
+			dist = vector.Distance(pos, flagPos);
+			if (dist <= td.Radius)
+			{
+				if (!td.CanPlayerBuild(steamID))
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	string FindBlockerName(vector pos, string steamID)
+	{
+		int i;
+		array<string> keys;
+		DZM_TerritoryData td;
+		Object flagObj;
+		vector flagPos;
+		float dist;
+
+		keys = m_Data.GetKeyArray();
+		for (i = 0; i < keys.Count(); i++)
+		{
+			td = m_Data.Get(keys[i]);
+			if (!td || !td.Claimed) continue;
+
+			flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+			if (!flagObj) continue;
+
+			flagPos = flagObj.GetPosition();
+			dist = vector.Distance(pos, flagPos);
+			if (dist <= td.Radius)
+			{
+				if (!td.CanPlayerBuild(steamID))
+				{
+					return td.DisplayName;
+				}
+			}
+		}
+		return "";
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	bool CheckFlagPlacementAllowed(vector pos)
+	{
+		int i;
+		array<string> keys;
+		DZM_TerritoryData td;
+		Object flagObj;
+		vector flagPos;
+		float dist;
+
+		keys = m_Data.GetKeyArray();
+		for (i = 0; i < keys.Count(); i++)
+		{
+			td = m_Data.Get(keys[i]);
+			if (!td || !td.Claimed) continue;
+
+			flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+			if (!flagObj) continue;
+
+			flagPos = flagObj.GetPosition();
+			dist = vector.Distance(pos, flagPos);
+			if (dist <= td.Radius * 2)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	//==================================================================================================================
+	// УПРАВЛЕНИЕ ДРУЗЬЯМИ
+	//==================================================================================================================
+
+	//------------------------------------------------------------------------------------------------------------------
+	bool InviteFriend(string netID, string ownerID, string friendID)
+	{
+		DZM_TerritoryData td;
+		td = GetByNetID(netID);
+		if (!td) return false;
+		if (!td.IsOwner(ownerID)) return false;
+		bool result;
+		result = td.AddFriend(friendID);
+		if (result) SaveToFile();
+		return result;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	bool KickFriend(string netID, string ownerID, string friendID)
+	{
+		DZM_TerritoryData td;
+		td = GetByNetID(netID);
+		if (!td) return false;
+		if (!td.IsOwner(ownerID)) return false;
+		bool result;
+		result = td.RemoveFriend(friendID);
+		if (result) SaveToFile();
+		return result;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	bool ChangeName(string netID, string ownerID, string newName)
+	{
+		DZM_TerritoryData td;
+		td = GetByNetID(netID);
+		if (!td) return false;
+		if (!td.IsOwner(ownerID)) return false;
+		if (newName.Length() == 0) return false;
+		td.DisplayName = newName;
+		SaveToFile();
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	bool ChangeRadius(string netID, string ownerID, float newRadius)
+	{
+		DZM_TerritoryData td;
+		td = GetByNetID(netID);
+		if (!td) return false;
+		if (!td.IsOwner(ownerID)) return false;
+		td.Radius = Math.Clamp(newRadius, DZM_Settings.MIN_RADIUS, DZM_Settings.MAX_RADIUS);
+		SaveToFile();
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	DZM_TerritoryData FindTerritoryAtPos(vector pos)
+	{
+		int i;
+		array<string> keys;
+		DZM_TerritoryData td;
+		Object flagObj;
+		vector flagPos;
+		float dist;
+
+		keys = m_Data.GetKeyArray();
+		for (i = 0; i < keys.Count(); i++)
+		{
+			td = m_Data.Get(keys[i]);
+			if (!td || !td.Claimed) continue;
+
+			flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+			if (!flagObj) continue;
+
+			flagPos = flagObj.GetPosition();
+			dist = vector.Distance(pos, flagPos);
+			if (dist <= td.Radius)
+			{
+				return td;
+			}
+		}
+		return null;
+	}
+
+	//==================================================================================================================
+	// СОХРАНЕНИЕ / ЗАГРУЗКА
+	//==================================================================================================================
+
+	//------------------------------------------------------------------------------------------------------------------
+	void SaveToFile()
+	{
+		FileHandle fh;
+		int i;
+		int j;
+		array<string> keys;
+		DZM_TerritoryData td;
+		string line;
+
+		fh = OpenFile(m_SavePath, FileMode.WRITE);
+		if (!fh) return;
+
+		FPrintln(fh, "DZM_TF_V2");
+
+		keys = m_Data.GetKeyArray();
+		for (i = 0; i < keys.Count(); i++)
+		{
+			td = m_Data.Get(keys[i]);
+			if (!td) continue;
+
+			FPrintln(fh, "T");
+			FPrintln(fh, td.FlagNetID);
+			FPrintln(fh, td.OwnerSteamID);
+			FPrintln(fh, td.OwnerName);
+			FPrintln(fh, td.DisplayName);
+			FPrintln(fh, td.Radius.ToString());
+
+			if (td.Claimed)
+			{
+				FPrintln(fh, "1");
+			}
+			else
+			{
+				FPrintln(fh, "0");
+			}
+
+			FPrintln(fh, td.Friends.Count().ToString());
+			for (j = 0; j < td.Friends.Count(); j++)
+			{
+				FPrintln(fh, td.Friends[j]);
+			}
+		}
+
+		CloseFile(fh);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	void LoadFromFile()
+	{
+		FileHandle fh;
+		ref array<string> lines;
+		string line;
+		int idx;
+		DZM_TerritoryData td;
+		int friendCount;
+		int fi;
+
+		fh = OpenFile(m_SavePath, FileMode.READ);
+		if (!fh)
+		{
+			Print("[DZM_TerritoryFlags] No save file, starting fresh");
+			return;
+		}
+
+		lines = new array<string>;
+		while (FGets(fh, line) >= 0)
+		{
+			line.Replace("\r", "");
+			line.Replace("\n", "");
+			lines.Insert(line);
+		}
+		CloseFile(fh);
+
+		if (lines.Count() == 0) return;
+		if (lines[0] != "DZM_TF_V2")
+		{
+			Print("[DZM_TerritoryFlags] Unknown save version: " + lines[0]);
+			return;
+		}
+
+		idx = 1;
+		while (idx < lines.Count())
+		{
+			if (lines[idx] == "T")
+			{
+				idx++;
+				if (idx + 5 > lines.Count()) break;
+
+				td = new DZM_TerritoryData();
+				td.FlagNetID = lines[idx]; idx++;
+				td.OwnerSteamID = lines[idx]; idx++;
+				td.OwnerName = lines[idx]; idx++;
+				td.DisplayName = lines[idx]; idx++;
+				td.Radius = lines[idx].ToFloat();
+				if (td.Radius <= 0) td.Radius = DZM_Settings.CLAIM_RADIUS;
+				idx++;
+
+				if (lines[idx] == "1")
+				{
+					td.Claimed = true;
+				}
+				else
+				{
+					td.Claimed = false;
+				}
+				idx++;
+
+				friendCount = lines[idx].ToInt();
+				idx++;
+
+				for (fi = 0; fi < friendCount && idx < lines.Count(); fi++)
+				{
+					td.Friends.Insert(lines[idx]);
+					idx++;
+				}
+
+				m_Data.Set(td.FlagNetID, td);
+			}
+			else
+			{
+				idx++;
+			}
+		}
+
+		Print("[DZM_TerritoryFlags] Loaded " + m_Data.Count().ToString() + " territories");
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	static PlayerBase FindOnlinePlayer(string name)
+	{
+		array<Man> players;
+		string search;
+		Man m;
+		PlayerBase p;
+		int i;
+		string pName;
+
+		if (name.Length() == 0) return null;
+
+		players = new array<Man>;
+		GetGame().GetPlayers(players);
+
+		search = name;
+		search.ToLower();
+
+		for (i = 0; i < players.Count(); i++)
+		{
+			m = players[i];
+			p = PlayerBase.Cast(m);
+			if (p && p.GetIdentity())
+			{
+				pName = p.GetIdentity().GetName();
+				pName.ToLower();
+				if (pName == search)
+				{
+					return p;
+				}
+			}
+		}
+
+		for (i = 0; i < players.Count(); i++)
+		{
+			m = players[i];
+			p = PlayerBase.Cast(m);
+			if (p && p.GetIdentity())
+			{
+				pName = p.GetIdentity().GetName();
+				pName.ToLower();
+			if (pName.Contains(search))
+				{
+					return p;
+				}
+			}
+		}
+
+		return null;
+	}
+};

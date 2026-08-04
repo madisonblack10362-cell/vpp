@@ -1,0 +1,16 @@
+enum DZM_RPC
+{
+	DZM_OPEN_MENU = 4200001,
+	DZM_CLAIM_FLAG,
+	DZM_INVITE_PLAYER,
+	DZM_KICK_PLAYER,
+	DZM_SET_NAME,
+	DZM_SET_RADIUS
+};
+
+class DZM_Settings
+{
+	static float CLAIM_RADIUS = 100.0;
+	static float MIN_RADIUS = 20.0;
+	static float MAX_RADIUS = 300.0;
+};
