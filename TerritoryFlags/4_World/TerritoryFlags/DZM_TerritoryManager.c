@@ -115,7 +115,7 @@ class DZM_TerritoryManager
                 DZM_TerritoryData td;
                 vector flagPos;
                 float dist;
-                Object flagObj;
+                EntityAI flagObj;
 
                 keys = m_Data.GetKeyArray();
                 for (i = 0; i < keys.Count(); i++)
@@ -123,7 +123,7 @@ class DZM_TerritoryManager
                         td = m_Data.Get(keys[i]);
                         if (!td || !td.Claimed) continue;
 
-                        flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+                        flagObj = GetGame().GetEntityByNetworkId(keys[i].ToInt());
                         if (!flagObj) continue;
 
                         flagPos = flagObj.GetPosition();
@@ -145,7 +145,7 @@ class DZM_TerritoryManager
                 int i;
                 array<string> keys;
                 DZM_TerritoryData td;
-                Object flagObj;
+                EntityAI flagObj;
                 vector flagPos;
                 float dist;
 
@@ -155,7 +155,7 @@ class DZM_TerritoryManager
                         td = m_Data.Get(keys[i]);
                         if (!td || !td.Claimed) continue;
 
-                        flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+                        flagObj = GetGame().GetEntityByNetworkId(keys[i].ToInt());
                         if (!flagObj) continue;
 
                         flagPos = flagObj.GetPosition();
@@ -177,7 +177,7 @@ class DZM_TerritoryManager
                 int i;
                 array<string> keys;
                 DZM_TerritoryData td;
-                Object flagObj;
+                EntityAI flagObj;
                 vector flagPos;
                 float dist;
 
@@ -187,7 +187,7 @@ class DZM_TerritoryManager
                         td = m_Data.Get(keys[i]);
                         if (!td || !td.Claimed) continue;
 
-                        flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+                        flagObj = GetGame().GetEntityByNetworkId(keys[i].ToInt());
                         if (!flagObj) continue;
 
                         flagPos = flagObj.GetPosition();
@@ -261,7 +261,7 @@ class DZM_TerritoryManager
                 int i;
                 array<string> keys;
                 DZM_TerritoryData td;
-                Object flagObj;
+                EntityAI flagObj;
                 vector flagPos;
                 float dist;
 
@@ -271,7 +271,7 @@ class DZM_TerritoryManager
                         td = m_Data.Get(keys[i]);
                         if (!td || !td.Claimed) continue;
 
-                        flagObj = GetGame().GetObjectByNetworkID(keys[i].ToInt());
+                        flagObj = GetGame().GetEntityByNetworkId(keys[i].ToInt());
                         if (!flagObj) continue;
 
                         flagPos = flagObj.GetPosition();

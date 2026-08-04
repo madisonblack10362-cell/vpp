@@ -80,7 +80,7 @@ class DZM_ServerHandler
                 PlayerBase player;
                 string netID;
                 TerritoryFlag flag;
-                Object obj;
+                EntityAI obj;
                 bool ok;
 
                 if (type != CallType.Server) return;
@@ -91,7 +91,7 @@ class DZM_ServerHandler
                 if (!player) return;
 
                 netID = p.param1;
-                obj = GetGame().GetObjectByNetworkID(netID.ToInt());
+                obj = GetGame().GetEntityByNetworkId(netID.ToInt());
                 flag = TerritoryFlag.Cast(obj);
                 if (!flag) return;
 
