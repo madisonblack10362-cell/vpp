@@ -26,7 +26,7 @@ class DZM_ServerHandler
 
                 if (!sender) return;
 
-                td = DZM_TerritoryManager.Get().GetByNetID(netID);
+                td = DZM_TerritoryManager.Get().GetByID(netID);
 
                 data = netID + "|";
 
