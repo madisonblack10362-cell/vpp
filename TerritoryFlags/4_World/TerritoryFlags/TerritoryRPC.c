@@ -69,8 +69,8 @@ class TerritoryRPC
 		if (!target)
 		{
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 3.0, "Territory",
-					"Player not found: " + targetName,
+					player.GetIdentity(), 3.0, "Территория",
+					"Игрок не найден: " + targetName,
 					"set:dayz_gui icon");
 			return;
 		}
@@ -81,14 +81,14 @@ class TerritoryRPC
 		if (ok)
 		{
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 3.0, "Territory",
-					"Invited: " + targetName,
+					player.GetIdentity(), 3.0, "Территория",
+					"Приглашён: " + targetName,
 					"set:dayz_gui icon");
 
 			// Уведомить приглашённого
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					target.GetIdentity(), 4.0, "Territory",
-					"You were invited to a territory!",
+					target.GetIdentity(), 4.0, "Территория",
+					"Вас пригласили на территорию!",
 					"set:dayz_gui icon");
 
 			TerritoryManager.GetInstance().Save();
@@ -96,8 +96,8 @@ class TerritoryRPC
 		else
 		{
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 3.0, "Territory",
-					"Already invited or error",
+					player.GetIdentity(), 3.0, "Территория",
+					"Уже приглашён или ошибка",
 					"set:dayz_gui icon");
 		}
 
@@ -117,8 +117,8 @@ class TerritoryRPC
 		if (ok)
 		{
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 3.0, "Territory",
-					"Invite removed",
+					player.GetIdentity(), 3.0, "Территория",
+					"Приглашение удалено",
 					"set:dayz_gui icon");
 			TerritoryManager.GetInstance().Save();
 		}
@@ -133,9 +133,9 @@ class TerritoryRPC
 		if (!player || !player.GetIdentity()) return;
 		TerritoryManager.GetInstance().SetTerritoryName(flagID, player.GetIdentity().GetPlainId(), name);
 		NotificationSystem.SendNotificationToPlayerIdentityExtended(
-				player.GetIdentity(), 3.0, "Territory",
-					"Name set to: " + name,
-					"set:dayz_gui icon");
+				player.GetIdentity(), 3.0, "Территория",
+				"Название: " + name,
+				"set:dayz_gui icon");
 		SendMenuUpdate(player, flagID);
 	}
 
@@ -147,9 +147,9 @@ class TerritoryRPC
 		if (!player || !player.GetIdentity()) return;
 		TerritoryManager.GetInstance().SetRadius(flagID, player.GetIdentity().GetPlainId(), radius);
 		NotificationSystem.SendNotificationToPlayerIdentityExtended(
-				player.GetIdentity(), 3.0, "Territory",
-					"Radius set to: " + radius.ToString() + "m",
-					"set:dayz_gui icon");
+				player.GetIdentity(), 3.0, "Территория",
+				"Радиус: " + radius.ToString() + "м",
+				"set:dayz_gui icon");
 		SendMenuUpdate(player, flagID);
 	}
 

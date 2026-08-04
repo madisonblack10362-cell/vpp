@@ -15,7 +15,7 @@ class ActionTerritoryMenu: ActionSingleUseBase
 
         override string GetText()
         {
-                return "Territory Menu";
+                return "Меню территории";
         }
 
         override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)

@@ -16,8 +16,8 @@ modded class ActionBuildPart
 		{
 			string blocker = TerritoryManager.GetInstance().GetBlockerOwnerName(buildPos, steamID);
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 3.0, "Territory",
-					"Cannot build here! Territory: " + blocker,
+					player.GetIdentity(), 3.0, "Территория",
+					"Нельзя строить! Территория: " + blocker,
 					"set:dayz_gui icon");
 			return false;
 		}
@@ -40,8 +40,8 @@ modded class ActionBuild
 		{
 			string blocker = TerritoryManager.GetInstance().GetBlockerOwnerName(buildPos, steamID);
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 3.0, "Territory",
-					"Cannot build here! Territory: " + blocker,
+					player.GetIdentity(), 3.0, "Территория",
+					"Нельзя строить! Территория: " + blocker,
 					"set:dayz_gui icon");
 			return false;
 		}
@@ -62,8 +62,8 @@ modded class ActionDeployObject
 		{
 			string blocker = TerritoryManager.GetInstance().GetBlockerOwnerName(deployPos, steamID);
 			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-					player.GetIdentity(), 3.0, "Territory",
-					"Cannot deploy here! Territory: " + blocker,
+					player.GetIdentity(), 3.0, "Территория",
+					"Нельзя размещать! Территория: " + blocker,
 					"set:dayz_gui icon");
 			return false;
 		}

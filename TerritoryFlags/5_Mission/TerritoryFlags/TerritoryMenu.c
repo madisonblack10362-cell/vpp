@@ -123,7 +123,7 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 			// Показываем кнопку Claim
 			m_ClaimPanel.Show(true);
 			m_MainPanel.Show(false);
-			if (m_TitleText) m_TitleText.SetText("Flag - Not Claimed");
+			if (m_TitleText) m_TitleText.SetText("Флаг - Не занят");
 			return;
 		}
 
@@ -131,7 +131,7 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		m_ClaimPanel.Show(false);
 		m_MainPanel.Show(true);
 
-		if (m_TitleText) m_TitleText.SetText("Territory: " + terrName);
+		if (m_TitleText) m_TitleText.SetText("Территория: " + terrName);
 		if (m_NameInput) m_NameInput.SetText(terrName);
 		if (m_RadiusInput) m_RadiusInput.SetText(radius.ToString());
 
@@ -221,7 +221,7 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		if (!m_Root) return;
 
 		m_Root.SetPos(0.5, 0.3);
-	m_Root.SetSize(0.35, 0.45);
+		m_Root.SetSize(0.35, 0.45);
 		m_Root.SetColor(ARGB(220, 20, 20, 20));
 
 		if (m_HeaderPanel)
@@ -237,7 +237,7 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 			m_TitleText.SetSize(0.8, 0.06);
 			m_TitleText.SetTextSize(16);
 			m_TitleText.SetColor(ARGB(255, 255, 255, 255));
-			m_TitleText.SetText("Territory");
+			m_TitleText.SetText("Территория");
 		}
 
 		if (m_BtnClose)
@@ -249,13 +249,13 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 			m_BtnClose.SetTextColor(ARGB(255, 255, 255, 255));
 		}
 
-		StyleButton(m_BtnClaim, 0.1, 0.15, 0.8, 0.15, "CLAIM TERRITORY", ARGB(255, 40, 120, 40));
+		StyleButton(m_BtnClaim, 0.1, 0.15, 0.8, 0.15, "ЗАХВАТИТЬ ТЕРРИТОРИЮ", ARGB(255, 40, 120, 40));
 
 		// Label + Input row helper
 		float rowY = 0.03;
-		StyleRow(m_NameInput, m_BtnSetName, rowY, "Name:", "Set");
-		StyleRow(m_RadiusInput, m_BtnSetRadius, rowY + 0.12, "Radius (20-300m):", "Set");
-		StyleRow(m_InviteInput, m_BtnInvite, rowY + 0.24, "Invite player:", "Invite", ARGB(255, 40, 100, 160));
+		StyleRow(m_NameInput, m_BtnSetName, rowY, "Название:", "Применить");
+		StyleRow(m_RadiusInput, m_BtnSetRadius, rowY + 0.12, "Радиус (20-300м):", "Применить");
+		StyleRow(m_InviteInput, m_BtnInvite, rowY + 0.24, "Пригласить игрока:", "Пригласить", ARGB(255, 40, 100, 160));
 
 		if (m_PlayerList)
 		{
@@ -265,7 +265,7 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 			m_PlayerList.SetTextColor(ARGB(255, 220, 220, 220));
 		}
 
-		StyleButton(m_BtnRemoveInvite, 0.3, 0.85, 0.4, 0.08, "Remove Selected", ARGB(255, 160, 40, 40));
+		StyleButton(m_BtnRemoveInvite, 0.3, 0.85, 0.4, 0.08, "Удалить выбранного", ARGB(255, 160, 40, 40));
 	}
 
 	void StyleRow(EditBoxWidget input, ButtonWidget btn, float y, string labelText, string btnText, int btnColor = 0)
