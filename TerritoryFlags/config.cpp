@@ -1,6 +1,6 @@
 class CfgPatches
 {
-	class DZM_VPPAdminToolsDefaults
+	class DZM_TerritoryFlags
 	{
 		units[]={};
 		weapons[]={};
@@ -8,21 +8,20 @@ class CfgPatches
 		requiredAddons[]=
 		{
 			"DZ_Data",
-			"DZ_Scripts",
-			"DZM_VPPAdminTools"
+			"DZ_Scripts"
 		};
 	};
 };
 class CfgMods
 {
-	class DZM_VPPAdminToolsDefaults
+	class DZM_TerritoryFlags
 	{
-		dir="VPPAdminToolsDefaults";
+		dir="TerritoryFlags";
 		picture="";
 		action="";
 		hideName=1;
 		hidePicture=1;
-		name="VPPAdminToolsDefaults";
+		name="TerritoryFlags";
 		credits="";
 		author="";
 		authorID="0";
@@ -42,32 +41,32 @@ class CfgMods
 			{
 				value="";
 				files[]=
-				{
-					"VPPAdminToolsDefaults/1_Core"
+			{
+					"TerritoryFlags/1_Core"
 				};
 			};
 			class gameScriptModule
 			{
 				value="";
 				files[]=
-				{
-					"VPPAdminToolsDefaults/3_Game"
+			{
+					"TerritoryFlags/3_Game"
 				};
 			};
 			class worldScriptModule
 			{
 				value="";
 				files[]=
-				{
-					"VPPAdminToolsDefaults/4_World"
+			{
+					"TerritoryFlags/4_World"
 				};
 			};
 			class missionScriptModule
 			{
 				value="";
 				files[]=
-				{
-					"VPPAdminToolsDefaults/5_Mission"
+			{
+					"TerritoryFlags/5_Mission"
 				};
 			};
 		};

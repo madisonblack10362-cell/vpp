@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget name="TerritoryMenuRoot" type="Widget" style="TerritoryMenuBackground">
+	<children>
+		<!-- Заголовок -->
+		<widget name="HeaderPanel" type="Widget" style="TerritoryHeader">
+			<children>
+				<widget name="TitleText" type="TextWidget" style="TerritoryTitle"/>
+				<widget name="BtnClose" type="ButtonWidget" style="TerritoryBtnClose"/>
+			</children>
+		</widget>
+
+		<!-- Кнопка Claim (для не завяленных флагов) -->
+		<widget name="ClaimPanel" type="Widget" style="TerritoryPanel">
+			<children>
+				<widget name="BtnClaim" type="ButtonWidget" style="TerritoryBtnAction"/>
+			</children>
+		</widget>
+
+		<!-- Основная панель (для завяленных флагов) -->
+		<widget name="MainPanel" type="Widget" style="TerritoryPanel">
+			<children>
+				<!-- Название территории -->
+				<widget name="NameRow" type="Widget" style="TerritoryRow">
+					<children>
+						<widget name="NameLabel" type="TextWidget" style="TerritoryLabel"/>
+						<widget name="NameInput" type="EditBoxWidget" style="TerritoryInput"/>
+						<widget name="BtnSetName" type="ButtonWidget" style="TerritoryBtnSmall"/>
+					</children>
+				</widget>
+
+				<!-- Радиус -->
+				<widget name="RadiusRow" type="Widget" style="TerritoryRow">
+					<children>
+						<widget name="RadiusLabel" type="TextWidget" style="TerritoryLabel"/>
+						<widget name="RadiusInput" type="EditBoxWidget" style="TerritoryInput"/>
+						<widget name="BtnSetRadius" type="ButtonWidget" style="TerritoryBtnSmall"/>
+					</children>
+				</widget>
+
+				<!-- Инвайт -->
+				<widget name="InviteRow" type="Widget" style="TerritoryRow">
+					<children>
+						<widget name="InviteLabel" type="TextWidget" style="TerritoryLabel"/>
+						<widget name="InviteInput" type="EditBoxWidget" style="TerritoryInput"/>
+						<widget name="BtnInvite" type="ButtonWidget" style="TerritoryBtnAction"/>
+				</children>
+				</widget>
+
+				<!-- Список приглашённых -->
+				<widget name="PlayerListHeader" type="TextWidget" style="TerritorySectionLabel"/>
+				<widget name="PlayerList" type="TextListboxWidget" style="TerritoryPlayerList"/>
+
+				<!-- Кнопка кикнуть -->
+				<widget name="BtnRemoveInvite" type="ButtonWidget" style="TerritoryBtnDanger"/>
+			</children>
+		</widget>
+	</children>
+</widget>
