@@ -52,12 +52,6 @@ modded class TerritoryFlag
 		DZM_Cleanup();
 	}
 
-	override void EEDelete(EntityAI owner)
-	{
-		super.EEDelete(owner);
-		DZM_Cleanup();
-	}
-
 	void DZM_Cleanup()
 	{
 		if (GetGame().IsServer())
