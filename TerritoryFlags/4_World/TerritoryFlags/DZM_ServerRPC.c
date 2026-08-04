@@ -257,4 +257,4 @@ modded class PluginManager
 			}
 		}
 	}
-};
+}
