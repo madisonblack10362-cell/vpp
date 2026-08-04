@@ -1,6 +1,5 @@
 //------------------------------------------------------------------------------------------------
 // ActionBuildRestriction — блокирует строительство в чужих территориях
-// Перехватываем ключевые строительные действия
 //------------------------------------------------------------------------------------------------
 
 modded class ActionBuildPart
@@ -9,8 +8,13 @@ modded class ActionBuildPart
 	{
 		if (!super.ActionCondition(player, target, item)) return false;
 
+		if (!player.GetIdentity()) return true; // На всякий случай
+
+		Object targetObj = target.GetObject();
+		if (!targetObj) return true;
+
 		string steamID = player.GetIdentity().GetPlainId();
-		vector buildPos = target.GetObject().GetPosition();
+		vector buildPos = targetObj.GetPosition();
 
 		if (!TerritoryManager.GetInstance().CanBuild(buildPos, steamID))
 		{
@@ -31,9 +35,12 @@ modded class ActionBuild
 	{
 		if (!super.ActionCondition(player, target, item)) return false;
 
+		if (!player.GetIdentity()) return true;
+
 		string steamID = player.GetIdentity().GetPlainId();
 		vector buildPos;
-		if (target.GetObject()) buildPos = target.GetObject().GetPosition();
+		Object targetObj = target.GetObject();
+		if (targetObj) buildPos = targetObj.GetPosition();
 		else buildPos = player.GetPosition();
 
 		if (!TerritoryManager.GetInstance().CanBuild(buildPos, steamID))
@@ -54,6 +61,8 @@ modded class ActionDeployObject
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
 		if (!super.ActionCondition(player, target, item)) return false;
+
+		if (!player.GetIdentity()) return true;
 
 		string steamID = player.GetIdentity().GetPlainId();
 		vector deployPos = player.GetPosition();

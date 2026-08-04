@@ -1,6 +1,6 @@
-//------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------
 // TerritoryMenu — клиентское меню управления территорией флага
-//------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------
 
 class TerritoryMenu extends ScriptedWidgetEventHandler
 {
@@ -25,29 +25,29 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	protected ButtonWidget m_BtnRemoveInvite;
 
 	// State
-	protected string  m_FlagID;
+	protected string  m_FlagNetID;  // текущий networkID флага (для RPC)
 	protected bool    m_IsOwner;
 	protected bool    m_IsClaimed;
 
+	// Отдельный массив steamID для списка игроков (т.к. TextListboxWidget.AddItem не принимает string data)
+	protected ref array<string> m_InvitedSteamIDs = new array<string>;
+
 	void TerritoryMenu()
 	{
-		// Регистрируем RPC
 		GetRPCManager().AddRPC("RPC_TerritoryFlags", "OpenMenu", this, SingleplayerExecutionType.Client);
 	}
 
-	//------------------------------------------------------------------------------------------------------------------
-	// Открыть меню
 	//------------------------------------------------------------------------------------------------------------------
 	void Show(Widget parent)
 	{
 		if (m_Root) { Hide(); }
 
-		m_Root = GetGame().GetWorkspace().CreateWidgets("TerritoryFlags/GUI/Layouts/TerritoryMenu/TerritoryMenu.layout");
+		// Путь ОТНОСИТЕЛЬНО КОРНЯ PBO (не включая имя мода!)
+		m_Root = GetGame().GetWorkspace().CreateWidgets("GUI/Layouts/TerritoryMenu/TerritoryMenu.layout");
 		if (!m_Root) { Print("[TerritoryMenu] ERROR: Failed to create layout"); return; }
 
 		m_Root.SetHandler(this);
 
-		// Кешируем виджеты
 		m_HeaderPanel = m_Root.FindAnyWidget("HeaderPanel");
 		m_TitleText  = TextWidget.Cast(m_Root.FindAnyWidget("TitleText"));
 		m_BtnClose   = ButtonWidget.Cast(m_Root.FindAnyWidget("BtnClose"));
@@ -65,11 +65,9 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		m_PlayerList   = TextListboxWidget.Cast(m_Root.FindAnyWidget("PlayerList"));
 		m_BtnRemoveInvite = ButtonWidget.Cast(m_Root.FindAnyWidget("BtnRemoveInvite"));
 
-		// Начальное состояние
 		m_MainPanel.Show(false);
 		m_ClaimPanel.Show(true);
 
-		// Стили
 		ApplyStyles();
 	}
 
@@ -85,13 +83,10 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	// RPC callback — сервер прислал данные территории
-	//------------------------------------------------------------------------------------------------------------------
 	void OpenMenu(CallType type, ParamsReadContext ctx, PlayerIdentity sender, Object target)
 	{
 		Param1<string> data;
 		if (!ctx.Read(data)) return;
-
 		ParseAndUpdate(data.param1);
 	}
 
@@ -100,14 +95,13 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	{
 		if (!m_Root) Show(null);
 
-		// Парсим данные от сервера
-		// Формат: flagID|ownerID|ownerName|territoryName|radius|claimed|isOwner|invitedCount|id1:name1;id2:name2|...
+		// Формат: netID|ownerID|ownerName|territoryName|radius|claimed|isOwner|invitedCount|id1:name1;id2:name2
 		array<string> parts = new array<string>;
 		data.Split("|", parts);
 
 		if (parts.Count() < 7) return;
 
-		m_FlagID   = parts[0];
+		m_FlagNetID = parts[0];  // ТЕКУЩИЙ networkID для обратных RPC
 		string ownerID = parts[1];
 		string ownerName = parts[2];
 		string terrName = parts[3];
@@ -120,14 +114,12 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 
 		if (!m_IsClaimed)
 		{
-			// Показываем кнопку Claim
 			m_ClaimPanel.Show(true);
 			m_MainPanel.Show(false);
 			if (m_TitleText) m_TitleText.SetText("Флаг - Не занят");
 			return;
 		}
 
-		// Показываем основную панель
 		m_ClaimPanel.Show(false);
 		m_MainPanel.Show(true);
 
@@ -137,10 +129,11 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 
 		// Парсим список приглашённых
 		m_PlayerList.ClearItems();
+		m_InvitedSteamIDs.Clear();
 		if (parts.Count() >= 9)
 		{
 			int invCount = parts[7].ToInt();
-			if (invCount > 0 && parts.Count() >= 9)
+			if (invCount > 0)
 			{
 				string invitedStr = parts[8];
 				array<string> pairs = new array<string>;
@@ -150,12 +143,14 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 					array<string> kv = new array<string>;
 					pair.Split(":", kv);
 					if (kv.Count() >= 2)
-						m_PlayerList.AddItem(kv[1], kv[0], 0, 0);
+					{
+						m_PlayerList.AddItem(kv[1], 0, 0, 0);
+						m_InvitedSteamIDs.Insert(kv[0]);
+					}
 				}
 			}
 		}
 
-		// Владелец видит кнопки управления
 		bool ownerControls = m_IsOwner;
 		if (m_NameInput) m_NameInput.Enable(ownerControls);
 		if (m_RadiusInput) m_RadiusInput.Enable(ownerControls);
@@ -166,8 +161,6 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	// Клик обработчики
-	//------------------------------------------------------------------------------------------------------------------
 	override bool OnClick(Widget w, int x, int y, int button)
 	{
 		if (w == m_BtnClose)
@@ -177,18 +170,19 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 		}
 		if (w == m_BtnClaim)
 		{
-			GetRPCManager().SendRPC("RPC_TerritoryFlags", "ClaimFlag", null, true);
+			// Отправляем ТЕКУЩИЙ networkID чтобы сервер нашёл флаг
+			GetRPCManager().SendRPC("RPC_TerritoryFlags", "ClaimFlag", new Param1<string>(m_FlagNetID), true);
 			return true;
 		}
 		if (w == m_BtnSetName && m_NameInput)
 		{
-			GetRPCManager().SendRPC("RPC_TerritoryFlags", "SetName", new Param2<string, string>(m_FlagID, m_NameInput.GetText()), true);
+			GetRPCManager().SendRPC("RPC_TerritoryFlags", "SetName", new Param2<string, string>(m_FlagNetID, m_NameInput.GetText()), true);
 			return true;
 		}
 		if (w == m_BtnSetRadius && m_RadiusInput)
 		{
 			float r = m_RadiusInput.GetText().ToFloat();
-			GetRPCManager().SendRPC("RPC_TerritoryFlags", "SetRadius", new Param2<string, float>(m_FlagID, r), true);
+			GetRPCManager().SendRPC("RPC_TerritoryFlags", "SetRadius", new Param2<string, float>(m_FlagNetID, r), true);
 			return true;
 		}
 		if (w == m_BtnInvite && m_InviteInput)
@@ -196,19 +190,18 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 			string name = m_InviteInput.GetText();
 			if (name.Length() > 0)
 			{
-				GetRPCManager().SendRPC("RPC_TerritoryFlags", "InvitePlayer", new Param2<string, string>(m_FlagID, name), true);
+				GetRPCManager().SendRPC("RPC_TerritoryFlags", "InvitePlayer", new Param2<string, string>(m_FlagNetID, name), true);
 				m_InviteInput.SetText("");
 			}
 			return true;
 		}
 		if (w == m_BtnRemoveInvite)
 		{
-			// Удаляем выбранного игрока из списка
-			if (m_PlayerList.GetSelectedRow() >= 0)
+			int row = m_PlayerList.GetSelectedRow();
+			if (row >= 0 && row < m_InvitedSteamIDs.Count())
 			{
-				string targetID;
-				m_PlayerList.GetItemData(m_PlayerList.GetSelectedRow(), 0, targetID);
-				GetRPCManager().SendRPC("RPC_TerritoryFlags", "RemoveInvite", new Param2<string, string>(m_FlagID, targetID), true);
+				string targetID = m_InvitedSteamIDs[row];
+				GetRPCManager().SendRPC("RPC_TerritoryFlags", "RemoveInvite", new Param2<string, string>(m_FlagNetID, targetID), true);
 			}
 			return true;
 		}
@@ -251,7 +244,6 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 
 		StyleButton(m_BtnClaim, 0.1, 0.15, 0.8, 0.15, "ЗАХВАТИТЬ ТЕРРИТОРИЮ", ARGB(255, 40, 120, 40));
 
-		// Label + Input row helper
 		float rowY = 0.03;
 		StyleRow(m_NameInput, m_BtnSetName, rowY, "Название:", "Применить");
 		StyleRow(m_RadiusInput, m_BtnSetRadius, rowY + 0.12, "Радиус (20-300м):", "Применить");
@@ -295,8 +287,6 @@ class TerritoryMenu extends ScriptedWidgetEventHandler
 	}
 }
 
-//------------------------------------------------------------------------------------------------
-// Глобальный экземпляр меню
 //------------------------------------------------------------------------------------------------
 static ref TerritoryMenu g_TerritoryMenu;
 

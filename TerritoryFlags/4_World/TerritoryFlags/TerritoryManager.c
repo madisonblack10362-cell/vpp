@@ -55,7 +55,7 @@ class TerritoryManager
 {
 	private static ref TerritoryManager s_Instance;
 	private ref array<ref TerritoryData> m_Territories = new array<ref TerritoryData>;
-	private const string SAVE_FILE = "$profile:TerritoryFlags.json";
+	private const string SAVE_FILE = "$profile:TerritoryFlags.dat";
 
 	static TerritoryManager GetInstance()
 	{
@@ -78,7 +78,7 @@ class TerritoryManager
 		data.OwnerName = ownerName;
 		data.Position = pos;
 		data.Radius = radius;
-		data.TerritoryName = ownerName + "'s Base";
+		data.TerritoryName = ownerName + " - База";
 		data.Active = true;
 		m_Territories.Insert(data);
 		Save();
@@ -96,6 +96,23 @@ class TerritoryManager
 				m_Territories.Remove(i);
 				Save();
 				Print("[TerritoryFlags] Removed: " + flagID);
+				return;
+			}
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	// Переименовать flagID (нужно при рестарте сервера — networkID меняется)
+	//------------------------------------------------------------------------------------------------------------------
+	void UpdateFlagID(string oldID, string newID, vector newPos)
+	{
+		foreach (ref TerritoryData td : m_Territories)
+		{
+			if (td.FlagID == oldID)
+			{
+				td.FlagID = newID;
+				td.Position = newPos;
+				Print("[TerritoryFlags] Updated flagID: " + oldID + " -> " + newID);
 				return;
 			}
 		}
@@ -169,157 +186,175 @@ class TerritoryManager
 		return true;
 	}
 
-	//------------------------------------------------------------------------------------------------------------------
-	// JSON сохранение/загрузка
+	//==================================================================================================================
+	// СОХРАНЕНИЕ / ЗАГРУЗКА — свой формат, не JSON (чтобы не сломаться на пробелах и спецсимволах)
+	//==================================================================================================================
+	// Формат:
+	//   #TerritoryFlags V1
+	//   TERRITORY
+	//   <flagID>        — по одной строке на поле
+	//   <ownerID>
+	//   <ownerName>     — может содержать пробелы, без перевода строки
+	//   <territoryName>  — может содержать пробелы
+	//   <posX,posY,posZ>
+	//   <radius>
+	//   <active: 0/1>
+	//   <inviteCount>
+	//   <steamID>\t<playerName>  — один инвайт на строку, TAB разделитель
+	//   ... (inviteCount строк)
+	//   NEXT
+
 	//------------------------------------------------------------------------------------------------------------------
 	void Save()
 	{
 		FileHandle fh = OpenFile(SAVE_FILE, FileMode.WRITE);
-		if (!fh) return;
-		FPrintln(fh, "{\"territories\": [");
+		if (!fh)
+		{
+			Print("[TerritoryFlags] ERROR: Cannot open save file for writing: " + SAVE_FILE);
+			return;
+		}
+
+		FPrintln(fh, "#TerritoryFlags V1");
+
 		for (int i = 0; i < m_Territories.Count(); i++)
 		{
 			ref TerritoryData td = m_Territories[i];
-			string posStr = td.Position[0].ToString() + "," + td.Position[1].ToString() + "," + td.Position[2].ToString();
-			string invitedStr = "";
+			FPrintln(fh, "TERRITORY");
+			FPrintln(fh, td.FlagID);
+			FPrintln(fh, td.OwnerID);
+			FPrintln(fh, td.OwnerName);
+			FPrintln(fh, td.TerritoryName);
+			FPrintln(fh, td.Position[0].ToString() + "," + td.Position[1].ToString() + "," + td.Position[2].ToString());
+			FPrintln(fh, td.Radius.ToString());
+			FPrintln(fh, td.Active ? "1" : "0");
+			FPrintln(fh, td.InvitedIDs.Count().ToString());
 			for (int j = 0; j < td.InvitedIDs.Count(); j++)
 			{
-				if (j > 0) invitedStr += "|";
-				invitedStr += td.InvitedIDs[j] + ":" + td.InvitedNames[j];
+				FPrintln(fh, td.InvitedIDs[j] + "\t" + td.InvitedNames[j]);
 			}
-			FPrint(fh, "  {\"flagID\":\"" + td.FlagID + "\",");
-			FPrint(fh, "\"ownerID\":\"" + td.OwnerID + "\",");
-			FPrint(fh, "\"ownerName\":\"" + td.OwnerName + "\",");
-			FPrint(fh, "\"pos\":\"" + posStr + "\",");
-			FPrint(fh, "\"radius\":" + td.Radius.ToString() + ",");
-			FPrint(fh, "\"territoryName\":\"" + td.TerritoryName + "\",");
-			FPrint(fh, "\"invited\":\"" + invitedStr + "\",");
-			FPrint(fh, "\"active\":" + td.Active.ToString() + "}");
-			if (i < m_Territories.Count() - 1) FPrintln(fh, ",");
-			else FPrintln(fh, "");
+			FPrintln(fh, "NEXT");
 		}
-		FPrintln(fh, "]}");
+
 		CloseFile(fh);
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
 	void Load()
 	{
 		m_Territories.Clear();
-		string line;
+
 		FileHandle fh = OpenFile(SAVE_FILE, FileMode.READ);
-		if (!fh) { Print("[TerritoryFlags] No save file, starting fresh"); return; }
-		string content = "";
-		while (FGets(fh, line) >= 0)
-			content += line;
-		CloseFile(fh);
-		// Простой парс JSON вручную (без внешних библиотек)
-		parseTerritoriesJSON(content);
-		Print("[TerritoryFlags] Loaded " + m_Territories.Count() + " territories");
-	}
-
-	private void parseTerritoriesJSON(string json)
-	{
-		// Убираем пробелы и переносы для простоты парсинга
-		json.Replace(" ", "");
-		json.Replace("\n", "");
-		json.Replace("\r", "");
-
-		int territoriesStart = json.IndexOf("[{  }");
-		// Ищем начало массива territories
-		int arrStart = json.IndexOf("[");
-		int arrEnd = json.LastIndexOf("]");
-		if (arrStart == -1 || arrEnd == -1) return;
-
-		string arrContent = json.Substring(arrStart + 1, arrEnd - arrStart - 1);
-
-		// Парсим каждый объект { ... }
-		int pos = 0;
-		while (pos < arrContent.Length())
+		if (!fh)
 		{
-			int objStart = arrContent.IndexOf("{", pos);
-			if (objStart == -1) break;
-			int objEnd = arrContent.IndexOf("}", objStart);
-			if (objEnd == -1) break;
-
-			string obj = arrContent.Substring(objStart + 1, objEnd - objStart - 1);
-			ref TerritoryData td = parseOneTerritory(obj);
-			if (td) m_Territories.Insert(td);
-
-			pos = objEnd + 1;
+			Print("[TerritoryFlags] No save file, starting fresh");
+			return;
 		}
-	}
 
-	private TerritoryData parseOneTerritory(string obj)
-	{
-		ref TerritoryData td = new TerritoryData();
-
-		td.FlagID = extractJSONString(obj, "flagID");
-		td.OwnerID = extractJSONString(obj, "ownerID");
-		td.OwnerName = extractJSONString(obj, "ownerName");
-		td.TerritoryName = extractJSONString(obj, "territoryName");
-
-		string posStr = extractJSONString(obj, "pos");
-		td.Position = parseVector(posStr);
-
-		td.Radius = parseFloat(extractJSONString(obj, "radius"));
-		if (td.Radius <= 0) td.Radius = 100.0;
-
-		td.Active = extractJSONString(obj, "active") == "true" || extractJSONString(obj, "active") == "1";
-
-		string invitedStr = extractJSONString(obj, "invited");
-		if (invitedStr.Length() > 0)
+		// Читаем все строки
+		ref array<string> lines = new array<string>;
+		string line;
+		while (FGets(fh, line) >= 0)
 		{
-			array<string> pairs = new array<string>;
-			invitedStr.Split("|", pairs);
-			foreach (string pair : pairs)
+			// Убираем \r и \n
+			line.Replace("\r", "");
+			line.Replace("\n", "");
+			lines.Insert(line);
+		}
+		CloseFile(fh);
+
+		if (lines.Count() == 0) return;
+
+		// Проверяем заголовок
+		if (lines[0] != "#TerritoryFlags V1")
+		{
+			Print("[TerritoryFlags] ERROR: Unknown save file version");
+			return;
+		}
+
+		// Парсим блоки TERRITORY ... NEXT
+		int idx = 1;
+		while (idx < lines.Count())
+		{
+			if (lines[idx] == "TERRITORY")
 			{
-				array<string> parts = new array<string>;
-				pair.Split(":", parts);
-				if (parts.Count() >= 2)
+				idx++;
+				ref TerritoryData td = parseTerritoryBlock(lines, idx);
+				if (td)
 				{
-					td.InvitedIDs.Insert(parts[0]);
-					td.InvitedNames.Insert(parts[1]);
+					m_Territories.Insert(td);
 				}
+			}
+			else
+			{
+				idx++;
 			}
 		}
 
+		Print("[TerritoryFlags] Loaded " + m_Territories.Count() + " territories");
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	private TerritoryData parseTerritoryBlock(array<string> lines, inout int idx)
+	{
+		// Читаем 7 обязательных полей
+		if (idx + 7 > lines.Count()) return null;
+
+		ref TerritoryData td = new TerritoryData();
+		td.FlagID        = lines[idx]; idx++;
+		td.OwnerID       = lines[idx]; idx++;
+		td.OwnerName     = lines[idx]; idx++;
+		td.TerritoryName = lines[idx]; idx++;
+
+		string posStr = lines[idx]; idx++;
+		td.Position = parseVector(posStr);
+
+		td.Radius = lines[idx].ToFloat();
+		if (td.Radius <= 0) td.Radius = 100.0;
+		idx++;
+
+		td.Active = (lines[idx] == "1");
+		idx++;
+
+		// Читаем инвайты
+		if (idx >= lines.Count()) return td;
+		int invCount = lines[idx].ToInt();
+		idx++;
+
+		for (int i = 0; i < invCount && idx < lines.Count(); i++)
+		{
+			if (lines[idx] == "NEXT") break;
+
+			// Формат: steamID<TAB>playerName
+			int tabIdx = lines[idx].IndexOf("\t");
+			if (tabIdx > 0)
+			{
+				string sid = lines[idx].Substring(0, tabIdx);
+				string sname = lines[idx].Substring(tabIdx + 1);
+				td.InvitedIDs.Insert(sid);
+				td.InvitedNames.Insert(sname);
+			}
+			idx++;
+		}
+
+		// Пропускаем маркер NEXT
+		if (idx < lines.Count() && lines[idx] == "NEXT") idx++;
+
 		if (td.FlagID.Length() > 0 && td.OwnerID.Length() > 0)
 			return td;
+
 		return null;
 	}
 
-	private string extractJSONString(string json, string key)
-	{
-		string search = "\"" + key + "\":\"";
-		int start = json.IndexOf(search);
-		if (start == -1)
-		{
-			// Попробуем без кавычек (для чисел и bool)
-			search = "\"" + key + "\":";
-			start = json.IndexOf(search);
-			if (start == -1) return "";
-			start += search.Length();
-			int end = start;
-			while (end < json.Length() && json.Get(end) != ',' && json.Get(end) != '}') end++;
-			return json.Substring(start, end - start);
-		}
-		start += search.Length();
-		int end = json.IndexOf("\"", start);
-		if (end == -1) return "";
-		return json.Substring(start, end - start);
-	}
-
+	//------------------------------------------------------------------------------------------------------------------
 	private vector parseVector(string str)
 	{
 		array<string> parts = new array<string>;
 		str.Split(",", parts);
 		if (parts.Count() >= 3)
-			return Vector(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2]));
+			return Vector(parts[0].ToFloat(), parts[1].ToFloat(), parts[2].ToFloat());
 		return "0 0 0";
 	}
 
-	//------------------------------------------------------------------------------------------------------------------
-	// Получить список всех территорий (для отладки/админки)
 	//------------------------------------------------------------------------------------------------------------------
 	int GetTerritoryCount() { return m_Territories.Count(); }
 
