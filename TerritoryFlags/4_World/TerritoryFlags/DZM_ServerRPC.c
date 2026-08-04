@@ -79,8 +79,6 @@ class DZM_ServerHandler
                 Param1<string> p;
                 PlayerBase player;
                 string netID;
-                TerritoryFlag flag;
-                EntityAI obj;
                 bool ok;
 
                 if (type != CallType.Server) return;
@@ -91,11 +89,8 @@ class DZM_ServerHandler
                 if (!player) return;
 
                 netID = p.param1;
-                obj = GetGame().GetEntityByNetworkId(netID.ToInt());
-                flag = TerritoryFlag.Cast(obj);
-                if (!flag) return;
 
-                ok = DZM_TerritoryManager.Get().ClaimFlag(netID, sender.GetPlainId(), sender.GetName(), flag.GetPosition());
+                ok = DZM_TerritoryManager.Get().ClaimFlag(netID, sender.GetPlainId(), sender.GetName());
                 if (ok)
                 {
                         player.DZM_SendMessage("Территория захвачена! Радиус: 100м");

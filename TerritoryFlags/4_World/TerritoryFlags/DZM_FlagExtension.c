@@ -37,7 +37,7 @@ modded class TerritoryFlag
                 if (GetGame().IsServer() && m_DZM_UUID.Length() > 0)
                 {
                         currentNetID = GetNetworkID().ToString();
-                        DZM_TerritoryManager.Get().RegisterFlag(currentNetID, m_DZM_UUID);
+                        DZM_TerritoryManager.Get().RegisterFlag(currentNetID, m_DZM_UUID, GetPosition());
                         m_DZM_UUID = currentNetID;
                 }
 
@@ -55,7 +55,7 @@ modded class TerritoryFlag
                         netID = GetNetworkID().ToString();
                         if (m_DZM_UUID.Length() == 0)
                         {
-                                DZM_TerritoryManager.Get().RegisterFlag(netID, "");
+                                DZM_TerritoryManager.Get().RegisterFlag(netID, "", GetPosition());
                                 m_DZM_UUID = netID;
                         }
                 }

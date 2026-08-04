@@ -1,6 +1,7 @@
 class DZM_TerritoryData
 {
         string  FlagNetID;
+        vector  FlagPosition;
         string  OwnerSteamID;
         string  OwnerName;
         string  DisplayName;
