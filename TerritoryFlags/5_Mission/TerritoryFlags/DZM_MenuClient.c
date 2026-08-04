@@ -27,7 +27,7 @@ class DZM_TerritoryMenu extends ScriptedWidgetEventHandler
         void Show()
         {
                 if (m_Root) { Hide(); }
-                m_Root = GetGame().GetWorkspace().CreateWidgets("GUI/Layouts/TerritoryMenu/TerritoryMenu.layout");
+                m_Root = GetGame().GetWorkspace().CreateWidgets("TerritoryFlags/GUI/Layouts/TerritoryMenu/TerritoryMenu.layout");
                 if (!m_Root) { Print("[DZM] layout not found"); return; }
                 m_Root.SetHandler(this);
                 m_TitleText = TextWidget.Cast(m_Root.FindAnyWidget("TitleText"));
