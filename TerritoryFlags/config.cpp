@@ -1,3 +1,5 @@
+#define _ARMA_
+
 class CfgPatches
 {
 	class DZM_TerritoryFlags
@@ -30,21 +32,12 @@ class CfgMods
 		type="mod";
 		dependencies[]=
 		{
-			"Core",
 			"Game",
 			"World",
 			"Mission"
 		};
 		class defs
 		{
-			class engineScriptModule
-			{
-				value="";
-				files[]=
-			{
-					"TerritoryFlags/1_Core"
-				};
-			};
 			class gameScriptModule
 			{
 				value="";
@@ -59,14 +52,6 @@ class CfgMods
 				files[]=
 			{
 					"TerritoryFlags/4_World"
-				};
-			};
-			class missionScriptModule
-			{
-				value="";
-				files[]=
-			{
-					"TerritoryFlags/5_Mission"
 				};
 			};
 		};

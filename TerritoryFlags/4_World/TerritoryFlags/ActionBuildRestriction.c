@@ -1,93 +1,190 @@
-//------------------------------------------------------------------------------------------------
-// ActionBuildRestriction — блокирует строительство в чужих территориях
-//------------------------------------------------------------------------------------------------
-
-modded class ActionBuildPart
+modded class ActionDeployObject : ActionContinuousBase
 {
-	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
-	{
-		string steamID;
-		Object targetObj;
-		vector buildPos;
-		string blocker;
+        protected int m_LastSync = 0;
+        protected bool m_CanPlaceHere = false;
+        protected vector m_LastCheckLocation = vector.Zero;
 
-		if (!super.ActionCondition(player, target, item)) return false;
-		if (!player.GetIdentity()) return true;
+        override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
+        {
+                if (!super.ActionCondition(player, target, item))
+                {
+                        return false;
+                }
 
-		targetObj = target.GetObject();
-		if (!targetObj) return true;
+                if (GetGame().IsDedicatedServer())
+                {
+                        return true;
+                }
 
-		steamID = player.GetIdentity().GetPlainId();
-		buildPos = targetObj.GetPosition();
+                PlayerBase thePlayer = PlayerBase.Cast(player);
+                if (thePlayer && thePlayer.GetHologramLocal() && thePlayer.GetHologramLocal().GetProjectionEntity())
+                {
+                        vector projPos = thePlayer.GetHologramLocal().GetProjectionEntity().GetPosition();
+                        if (vector.Distance(m_LastCheckLocation, projPos) > 0.4)
+                        {
+                                string theGUID = "";
+                                if (thePlayer.GetIdentity())
+                                {
+                                        theGUID = thePlayer.GetIdentity().GetId();
+                                }
 
-		if (!TerritoryManager.GetInstance().CanBuild(buildPos, steamID))
-		{
-			blocker = TerritoryManager.GetInstance().GetBlockerOwnerName(buildPos, steamID);
-			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-				player.GetIdentity(), 3.0, "Территория",
-				"Нельзя строить! Территория: " + blocker,
-				"set:dayz_gui icon");
-			return false;
-		}
-		return true;
-	}
+                                m_LastCheckLocation = projPos;
+                                EntityAI kit = item;
+
+                                if (kit.GetType() == "TerritoryFlagKit")
+                                {
+                                        array<Object> objects = new array<Object>;
+                                        array<CargoBase> proxyCargos = new array<CargoBase>;
+                                        GetGame().GetObjectsAtPosition(projPos, TerritoryConst.RADIUS * 2, objects, proxyCargos);
+                                        TerritoryFlag theFlag;
+
+                                        for (int x = 0; x < objects.Count(); x++)
+                                        {
+                                                if (Class.CastTo(theFlag, objects.Get(x)))
+                                                {
+                                                        if (theFlag.HasRaisedFlag())
+                                                        {
+                                                                thePlayer.Zen_DisplayClientMessage("Слишком близко к другой территории!");
+                                                                m_CanPlaceHere = false;
+                                                                return false;
+                                                        }
+                                                }
+                                        }
+
+                                        m_CanPlaceHere = true;
+                                        return true;
+                                }
+
+                                if (!TerritoryFlag.HasTerritoryPermAtPos(theGUID, TerritoryPerm.DEPLOY, projPos))
+                                {
+                                        thePlayer.Zen_DisplayClientMessage("Нельзя размещать на чужой территории!");
+                                        m_CanPlaceHere = false;
+                                        return false;
+                                }
+
+                                m_CanPlaceHere = true;
+                                return true;
+                        }
+                        else
+                        {
+                                return m_CanPlaceHere;
+                        }
+                }
+
+                return true;
+        }
 }
 
-modded class ActionBuild
+modded class ActionBuildPart : ActionContinuousBase
 {
-	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
-	{
-		string steamID;
-		vector buildPos;
-		Object targetObj;
-		string blocker;
+        override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
+        {
+                if (!super.ActionCondition(player, target, item))
+                {
+                        return false;
+                }
 
-		if (!super.ActionCondition(player, target, item)) return false;
-		if (!player.GetIdentity()) return true;
+                if (GetGame().IsServer())
+                {
+                        return true;
+                }
 
-		steamID = player.GetIdentity().GetPlainId();
-		targetObj = target.GetObject();
-		if (targetObj)
-			buildPos = targetObj.GetPosition();
-		else
-			buildPos = player.GetPosition();
+                Object targetObj = target.GetObject();
+                if (!targetObj)
+                {
+                        return true;
+                }
 
-		if (!TerritoryManager.GetInstance().CanBuild(buildPos, steamID))
-		{
-			blocker = TerritoryManager.GetInstance().GetBlockerOwnerName(buildPos, steamID);
-			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-				player.GetIdentity(), 3.0, "Территория",
-				"Нельзя строить! Территория: " + blocker,
-				"set:dayz_gui icon");
-			return false;
-		}
-		return true;
-	}
+                PlayerBase thePlayer = PlayerBase.Cast(player);
+                if (!thePlayer || !thePlayer.GetIdentity())
+                {
+                        return true;
+                }
+
+                if (!TerritoryFlag.HasTerritoryPermAtPos(thePlayer.GetIdentity().GetId(), TerritoryPerm.BUILD, targetObj.GetPosition()))
+                {
+                        thePlayer.Zen_DisplayClientMessage("Нельзя строить на чужой территории!");
+                        return false;
+                }
+
+                return true;
+        }
 }
 
-modded class ActionDeployObject
+modded class ActionDismantlePart : ActionContinuousBase
 {
-	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
-	{
-		string steamID;
-		vector deployPos;
-		string blocker;
+        override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
+        {
+                if (!super.ActionCondition(player, target, item))
+                {
+                        return false;
+                }
 
-		if (!super.ActionCondition(player, target, item)) return false;
-		if (!player.GetIdentity()) return true;
+                if (GetGame().IsServer())
+                {
+                        return true;
+                }
 
-		steamID = player.GetIdentity().GetPlainId();
-		deployPos = player.GetPosition();
+                Object targetObj = target.GetObject();
+                if (!targetObj)
+                {
+                        return true;
+                }
 
-		if (!TerritoryManager.GetInstance().CanBuild(deployPos, steamID))
-		{
-			blocker = TerritoryManager.GetInstance().GetBlockerOwnerName(deployPos, steamID);
-			NotificationSystem.SendNotificationToPlayerIdentityExtended(
-				player.GetIdentity(), 3.0, "Территория",
-				"Нельзя размещать! Территория: " + blocker,
-				"set:dayz_gui icon");
-			return false;
-		}
-		return true;
-	}
+                PlayerBase thePlayer = PlayerBase.Cast(player);
+                if (!thePlayer || !thePlayer.GetIdentity())
+                {
+                        return true;
+                }
+
+                if (!TerritoryFlag.HasTerritoryPermAtPos(thePlayer.GetIdentity().GetId(), TerritoryPerm.DISMANTLE, targetObj.GetPosition()))
+                {
+                        thePlayer.Zen_DisplayClientMessage("Нельзя разбирать на чужой территории!");
+                        return false;
+                }
+
+                return true;
+        }
 }
+
+modded class ActionLowerFlag : ActionContinuousBase
+{
+        override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
+        {
+                if (!super.ActionCondition(player, target, item))
+                {
+                        return false;
+                }
+
+                TerritoryFlag theFlag = TerritoryFlag.Cast(target.GetObject());
+                PlayerBase thePlayer = PlayerBase.Cast(player);
+
+                if (theFlag && thePlayer && thePlayer.GetIdentity())
+                {
+                        if (vector.Distance(theFlag.GetPosition(), thePlayer.GetPosition()) > 2.6)
+                        {
+                                return false;
+                        }
+
+                        if (!theFlag.CheckPlayerPermission(thePlayer.GetIdentity().GetId(), TerritoryPerm.LOWERFLAG))
+                        {
+                                thePlayer.Zen_DisplayClientMessage("Нет прав для опускания флага!");
+                                return false;
+                        }
+
+                        return true;
+                }
+        }
+}
+
+modded class ActionConstructor
+{
+        override void RegisterActions(TTypenameArray actions)
+        {
+                super.RegisterActions(actions);
+                actions.Insert(ActionTerritoryClaim);
+                actions.Insert(ActionTerritoryInvite);
+                actions.Insert(ActionTerritoryJoin);
+                actions.Insert(ActionTerritoryClearMembers);
+        }
+};
